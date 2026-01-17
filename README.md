@@ -1,7 +1,7 @@
-# AI_Agents
+# AI_Agents 🤖
 ---
 ### About 🧩: 
-- In this repo, I play around with AI Agentization.  Each different folder is a different project.  
+- In this repo, I play around with **AI Agentization**.  Each different folder is a different project.  
 
 ---
 ## ⭐ 01: Market Research Multi-Agent System (LangGraph) 
