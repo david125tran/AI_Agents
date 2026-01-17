@@ -1,4 +1,4 @@
-# LLM-Fine-Tuning-Lab
+# AI_Agents 🤖
 ---
 ### About 🧩: 
 - In this repo, I play around with AI Agentization.  Each different folder is a different project.  
@@ -41,6 +41,8 @@ This creates a transparent pipeline where you can trace how a final answer was c
         - Extracted evidence  
         - Final synthesized report  
         - Claim validation results  
+
+<br><img src="https://github.com/david125tran/AI_Agents/blob/main/01/output/screenshot.png?raw=true" width="500"/>
 
 - **Mermaid Diagram:**
 ```mermaid
