@@ -1,51 +1,71 @@
-# Market Research Agent (LangGraph) — Node Flow
-
-## Goal
-Given a user question, the agent will:
-1) plan the work,
-2) search the web,
-3) retrieve/extract key facts,
-4) synthesize a structured report with citations,
-5) validate that claims are grounded in cited sources (and fix gaps).
+# LLM-Fine-Tuning-Lab
+---
+### About 🧩: 
+- In this repo, I play around with AI Agentization.  Each different folder is a different project.  
 
 ---
+## ⭐ 01: Market Research Multi-Agent System (LangGraph) 
+- **Project Overview:** This repository contains a prototype **multi-agent AI research system** built with **LangGraph** that demonstrates how a structured team of LLM agents can collaboratively reason, search the web, extract evidence, synthesize insights, and validate claims.  The goal of this project is to explore how agentic workflows can turn an open-ended question into a well-structured, evidence-based report in a transparent and auditable way.  I intentionally structured this as a multi-agent system rather than sending everything to one model in a huge prompt and having long context degradation (inducing hallucinations).  By splitting the tasks, I get cleaner reasoning, better grounding, and more predictable outputs.  
+- **Highlights:** Given a user question (e.g., *“Summarize recent trends in GLP-1 obesity drugs and their market impact”*), the system runs through a sequence of specialized agents:
+    - **Planner Agent:** Breaks the question into:
+        - A clear step-by-step plan  
+        - A set of high-quality web search queries  
+    - **Search Agent:** Uses the Tavily web search API to gather real, up-to-date sources relevant to the question.
+    - **Retriever Agent:** Reads the search results and extracts:
+        - Key facts  
+        - Relevant quotes  
+        - Important evidence snippets  
+    - **Synthesizer Agent:** Writes a clear, professional narrative report in plain prose based on the retrieved evidence.
+    - **Validator Agent:** Checks the synthesized report against the original sources and produces a list of:
+        - `VALID:` claims that are supported  
+        - `INVALID:` claims that are not clearly backed by evidence  
 
-## Graph Overview
+This creates a transparent pipeline where you can trace how a final answer was constructed.
+- **Architecture:** The system is implemented as a **stateful graph** using LangGraph.  Each node:
+    - Receives a shared state object  
+    - Modifies only its relevant fields  
+    - Passes the updated state forward  
+- **Technologies:**
+    - **Python 3.12**
+    - **LangGraph** (for agent orchestration)
+    - **LangChain + OpenAI (GPT-4.1-mini)**  
+    - **Tavily Web Search API**
+    - **Pydantic** (for structured LLM outputs)
+    - **ReportLab** (for PDF reporting)
+- **Output Artifacts:**
+    - **Console output** showing each agent’s intermediate results  
+    - **A structured PDF report** containing:
+        - The original question  
+        - The planner’s reasoning  
+        - Web search results  
+        - Extracted evidence  
+        - Final synthesized report  
+        - Claim validation results  
 
-### Nodes
-- **planner**: break the user request into a step-by-step plan + search queries
-- **search**: run web search for the planned queries
-- **retriever**: open top results and extract key facts + quotes/snippets + metadata
-- **synthesizer**: write a report using extracted facts and attach citations
-- **validator**: check every claim is supported by citations; flag gaps/hallucinations
-- **revise** (optional loop): if validator finds gaps, refine queries and re-run search/retrieve
+- **Mermaid Diagram:**
+flowchart LR
+    U[User Question] --> P
 
-### State (shared across nodes)
-- `question`: user’s original question
-- `plan`: ordered steps (planner output)
-- `queries`: list of search queries
-- `search_results`: list of results `{title, url, snippet, score}`
-- `sources`: list of opened sources `{url, title, published_date?, extracted_facts[]}`
-- `notes`: normalized evidence objects `{claim, evidence, url, quote?, confidence}`
-- `draft_report`: report text + citations
-- `validation`: `{passed: bool, issues: [ ... ]}`
-- `revision_round`: int (prevents infinite loops)
+    subgraph LangGraph Workflow
+        P[Planner Agent]
+        S[Search Agent]
+        R[Retriever Agent]
+        SY[Synthesizer Agent]
+        V[Validator Agent]
+    end
 
----
+    P --> S
+    S --> R
+    R --> SY
+    SY --> V
 
-## Flow Diagram (Mermaid)
+    P -.->|updates| State
+    S -.->|updates| State
+    R -.->|updates| State
+    SY -.->|updates| State
+    V -.->|updates| State
 
-```mermaid
-flowchart TD
-  A[START: user question] --> B[planner]
-  B --> C[search]
-  C --> D[retriever]
-  D --> E[synthesizer]
-  E --> F[validator]
+    State[(Shared State Store)]
 
-  F -->|passed| G[END: final report]
-  F -->|issues found| H[revise queries + plan]
-  H --> C
-
-  style A fill:#f2f2f2,stroke:#999
-  style G fill:#f2f2f2,stroke:#999
+    V --> PDF[PDF Report]
+    V --> Console[Console Output]
