@@ -45,6 +45,7 @@ This creates a transparent pipeline where you can trace how a final answer was c
         - Claim validation results  
 
 - **Mermaid Diagram:**
+```mermaid
 flowchart LR
     U[User Question] --> P
 
@@ -71,3 +72,6 @@ flowchart LR
 
     V --> PDF[PDF Report]
     V --> Console[Console Output]
+```
+
+Test
