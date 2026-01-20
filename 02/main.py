@@ -2384,6 +2384,17 @@ def validator(state: AgentState) -> AgentState:
 
         def extract_urls(line: str) -> List[str]:
             return re.findall(r"\[\[Source:[^\]]+\]\]\((https?://[^)]+)\)", line)
+        
+        def is_structural_line(s: str) -> bool:
+            # Section lead-ins like "Key risks include:" or "Valuation outlook:"
+            if s.endswith(":") and "http" not in s:
+                return True
+
+            # Very short glue lines that aren't real factual claims
+            if len(s) < 30 and "Source:" not in s:
+                return True
+
+            return False       
 
         # Validate per-line (cleaner than sentence splitting for markdown)
         candidate_lines: List[str] = []
@@ -2393,6 +2404,9 @@ def validator(state: AgentState) -> AgentState:
                 continue
             if s.startswith("#"):
                 continue
+            if is_structural_line(s):
+                continue
+
             candidate_lines.append(s)
 
         audit_rows: List[Dict[str, Any]] = []
@@ -2401,7 +2415,12 @@ def validator(state: AgentState) -> AgentState:
         for line in candidate_lines:
             urls = extract_urls(line)
             is_valid = any(u in valid_urls for u in urls)
-            audit_rows.append({"claim": line, "valid": bool(is_valid), "urls": urls})
+
+            # Accept deterministic sources even if they don't have URLs
+            if not is_valid:
+                if "Source: AlphaVantage+SEC" in line or "Source: Deterministic" in line:
+                    is_valid = True
+            audit_rows.append({"claim": line, "sourced": bool(is_valid), "urls": urls})
             if is_valid:
                 valid_count += 1
 
@@ -2412,11 +2431,11 @@ def validator(state: AgentState) -> AgentState:
         audit_md_lines.append("\n---\n")
         audit_md_lines.append("## Claim Audit\n")
         audit_md_lines.append(f"- Claims checked: {total}\n")
-        audit_md_lines.append(f"- Claims with at least one source URL: {valid_count} ({pct:.1f}%)\n")
+        audit_md_lines.append(f"- Claims sourced: {valid_count} ({pct:.1f}%)\n")
         audit_md_lines.append("\n### Claims\n")
 
         for i, row in enumerate(audit_rows, start=1):
-            status = "VALID" if row["valid"] else "INVALID"
+            status = "SOURCED" if row["sourced"] else "UNSOURCED"
             audit_md_lines.append(f"{i}. **{status}** — {row['claim']}\n")
 
         new_md = md.rstrip() + "\n" + "".join(audit_md_lines)
