@@ -73,3 +73,142 @@ flowchart LR
     V --> PDF[PDF Report]
     V --> Console[Console Output]
 ```
+
+---
+
+## ⭐ 02: Stock Due Diligence Agent (LangGraph + AWS Bedrock + Local RAG)
+
+- **Project Overview:**  
+  This folder contains a **evidence-grounded stock due diligence agent** that transforms a single natural-language question (e.g., *“Is Microsoft a good buy for the next 2 years?”*) into a structured, sourced, auditable PDF report. Rather than sending everything to one LLM in a massive context window, I deliberately decomposed the problem into a **multi-step LangGraph workflow** that separates:
+  - deterministic data collection (factual data)
+  - news gathering (market sentiment)
+  - local semantic retrieval  
+  - LLM reasoning
+
+  The design prioritizes **reliability, traceability, and repeatability**-the same concerns that matter in enterprise settings where hallucinations, stale data, and brittle prompts are unacceptable. The system behaves less like a chatbot and more like a miniature internal research platform.  My script currently takes in a natural-language question to form the PDF because I want to eventually configure this to a front-end webapp with multiple agents in it working together where the user can query for more questions.  
+
+- **Intentional Design Choices:**
+  - **Separation of concerns:**  
+    - Deterministic data (Alpha Vantage + SEC) is collected and summarized *before* any LLM reasoning.  
+    - News is treated as a distinct information layer with its own retrieval strategy.  
+    - The LLM only reasons over *curated, compact* inputs instead of raw APIs or documents.
+
+  - **Deliberate chunking strategy:**  
+    - News articles are embedded as **small, focused chunks** (headline + summary + metadata) instead of full articles.  
+    - Financial data is collapsed into a **stable “latest facts” snapshot** rather than embedding full statements.  
+    - A manifest of content hashes prevents unnecessary re-embedding-mirroring real production indexing pipelines.
+
+  - **Purposeful retrieval (not “embed everything”):**  
+    - The orchestrator generates a small set of high-quality retrieval queries.  
+    - Retrieval is run separately over:
+      - a *deterministic facts index* (for stable truths), and  
+      - a *news index* (for recent developments).  
+    - Results are deduplicated, ranked, and filtered before reaching the LLM.
+
+  - **Intentional news filtering:**  
+    - The system only surfaces news from the last 365 days and caps total articles, avoiding “recency noise.”  
+    - This mirrors how analysts actually work: focus on material, recent events rather than flooding the model with every headline.
+
+  - **Enterprise-style reliability:**  
+    - Aggressive disk caching with time to live variables for every API.  
+    - Graceful fallback to stale cache when external services fail.  
+    - Exponential backoff on Bedrock throttling.  
+    - Progress tracking across the entire graph for observability.
+
+  - **Claim traceability:**  
+    - The report requires inline citations like `[chunk_id]`.  
+    - A validator agent performs a lightweight “claim audit,” marking which lines are supported by at least one verifiable source URL.
+
+- **Highlights (what the agent does end-to-end):**
+  1. **Orchestrator Agent**  
+     - Extracts exactly one ticker from the user question (or asks a single clarification).  
+     - Generates targeted retrieval queries.
+
+  2. **Deterministic Analyst Agent**  
+     - Pulls structured data from Alpha Vantage (prices, overview, financials) and SEC filings.  
+     - Normalizes and summarizes this into a compact snapshot.
+
+  3. **News Agent**  
+     - Fetches up to 12 months of company news from Finnhub with caching + deduplication.
+
+  4. **Archiver Agent (Local RAG layer)**  
+     - Builds two local vector indexes:
+       - `news/` → chunked recent articles  
+       - `deterministic/` → latest financial facts  
+     - Uses content hashes to avoid redundant embeddings.
+
+  5. **Retriever Agent**  
+     - Runs semantic search over both indexes.  
+     - Filters old news, deduplicates chunks, and keeps only the most relevant evidence.
+
+  6. **Advisor Agent**  
+     - Receives a compact market snapshot + curated evidence.  
+     - Produces a structured report (rating, risks, key drivers, confidence, gaps) with citations.
+
+  7. **Validator Agent**  
+     - Audits each claim for source presence and appends a “Claim Audit” section.
+
+- **Architecture:**  
+  The system is implemented as a **stateful LangGraph workflow** where each node:
+  - Reads from a shared `AgentState`  
+  - Writes only its relevant outputs  
+  - Updates progress for observability  
+  - Hands off to the next specialized agent
+
+- **Technologies:**
+  - **Python 3.12**
+  - **LangGraph** (agent orchestration)
+  - **LangChain + AWS Bedrock** (Claude-style chat + embeddings)
+  - **LlamaIndex** (vector storage & retrieval)
+  - **Alpha Vantage + Finnhub + SEC EDGAR APIs**
+  - **Pydantic** (structured LLM outputs)
+  - **ReportLab** (PDF generation)
+  - **Disk-based caching + manifests**
+
+- **Output Artifacts:**
+  - Rich console logs showing progress and failures  
+  - A **sourced PDF report** including:
+    - Original question  
+    - Ticker extraction result  
+    - Deterministic financial snapshot  
+    - Retrieved evidence  
+    - LLM-written investment view  
+    - Claim validation results  
+
+- **Initial Problems:**  
+  I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
+  1) **Recency control was too weak.** Tavily returned a mix of high-quality recent sources and noisy, low-signal content, and I didn’t have a reliable way to systematically discriminate between “material, decision-relevant news” and background chatter.  
+  2) **Structured financial data was hard to scrape cleanly.** Key facts like prices, cash flows, balance sheets, and filings were scattered across websites in tables, PDFs, or interactive dashboards that were brittle to parse with generic scraping.  
+
+  After a few iterations, I deliberately **re-architected the entire system** around a deterministic data layer first-pulling structured data from trusted APIs (Alpha Vantage + SEC EDGAR) and treating news as a separate, curated signal rather than the foundation of reasoning. This shift made the system far more reliable & repeatable.  I intentionally avoided brittle web table scraping in favor of structured APIs.  
+
+- **Mermaid Diagram:**
+```mermaid
+flowchart LR
+    U2[User Question] --> O2
+
+    subgraph LangGraph Workflow 02
+        O2[Orchestrator]
+        D2[Deterministic Analyst]
+        N2[News Fetcher]
+        A2[Archiver]
+        R2[Retriever]
+        AD2[Advisor]
+        V2[Validator]
+    end
+
+    O2 --> D2 --> N2 --> A2 --> R2 --> AD2 --> V2
+
+    O2 -.->|updates| State2
+    D2 -.->|updates| State2
+    N2 -.->|updates| State2
+    A2 -.->|updates| State2
+    R2 -.->|updates| State2
+    AD2 -.->|updates| State2
+    V2 -.->|updates| State2
+
+    State2[(Shared State Store)]
+
+    V2 --> PDF2[PDF Report]
+    V2 --> Console2[Console Output]
+```
