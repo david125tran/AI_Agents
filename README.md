@@ -175,6 +175,29 @@ flowchart LR
     - LLM-written investment view  
     - Claim validation results  
 
+## 📄 Example Due Diligence Report (NVDA)
+
+<div align="center">
+
+<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA_due_diligence_20260120_015808Z-1.png?raw=true" width="40%" />
+<br/><br/>
+
+<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA_due_diligence_20260120_015808Z-2.png?raw=true" width="40%" />
+<br/><br/>
+
+<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA_due_diligence_20260120_015808Z-3.png?raw=true" width="40%" />
+<br/><br/>
+
+<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA_due_diligence_20260120_015808Z-4.png?raw=true" width="40%" />
+<br/><br/>
+
+<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA_due_diligence_20260120_015808Z-5.png?raw=true" width="40%" />
+<br/><br/>
+
+</div>
+
+
+
 - **Initial Problems:**  
   I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
   1) **Recency control was too weak.** Tavily returned a mix of high-quality recent sources and noisy, low-signal content, and I didn’t have a reliable way to systematically discriminate between “material, decision-relevant news” and background chatter.  
