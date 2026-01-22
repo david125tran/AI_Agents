@@ -2494,7 +2494,7 @@ graph = builder.compile()
 logger.info("Invoking graph with initial state")
 
 # Initialize 
-initial_state = {"question": "How is the NVDA stock?"}
+initial_state = {"question": "How is the Palanatir stock?"}
 out = graph.invoke(initial_state)
 
 
