@@ -98,12 +98,13 @@ flowchart LR
     - Financial data is collapsed into a **stable “latest facts” snapshot** rather than embedding full statements.  
     - A manifest of content hashes prevents unnecessary re-embedding-mirroring real production indexing pipelines.
 
-  - **Purposeful retrieval (not “embed everything”):**  
-    - The orchestrator generates a small set of high-quality retrieval queries.  
+  - **Semantic Retrieval with Metadata Guardrails:**  
+    - Rather than relying on pure similarity search alone, this system uses semantic retrieval as a candidate generator and then **applies metadata-based guardrails to control what evidence is allowed to reach the LLM** (i.e. filter for news recency). Query embeddings retrieve the most relevant chunks from local vector indexes, after which results are filtered and constrained using structured metadata. In particular, retrieval is split across two dedicated indexes-one for deterministic facts and one for recent news-and additional hard filters are applied for news recency, chunk identity deduplication, and source attribution. This ensures the LLM reasons over evidence that is not only semantically relevant, but also recent, stable, and contextually valid. By combining vector similarity with deterministic metadata constraints, the retrieval layer avoids stale or misleading context while remaining fast and production-ready.
     - Retrieval is run separately over:
       - a *deterministic facts index* (for stable truths), and  
       - a *news index* (for recent developments).  
     - Results are deduplicated, ranked, and filtered before reaching the LLM.
+
 
   - **Intentional news filtering:**  
     - The system only surfaces news from the last 365 days and caps total articles, avoiding “recency noise.”  
