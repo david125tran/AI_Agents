@@ -7,6 +7,7 @@
 ## ⭐ 01: Market Research Multi-Agent System (LangGraph) 
 - **Project Overview:** This repository contains a prototype **multi-agent AI research system** built with **LangGraph** that demonstrates how a structured team of LLM agents can collaboratively reason, search the web, extract evidence, synthesize insights, and validate claims.  The goal of this project is to explore how agentic workflows can turn an open-ended question into a well-structured, evidence-based report in a transparent and auditable way.  I intentionally structured this as a multi-agent system rather than sending everything to one model in a huge prompt and having long context degradation (inducing hallucinations).  By splitting the tasks, I get cleaner reasoning, better grounding, and more predictable outputs.  
 - **Highlights:** Given a user question (e.g., *“Summarize recent trends in GLP-1 obesity drugs and their market impact”*), the system runs through a sequence of specialized agents:
+  
 | Agent / Node | Responsibility | Inputs | Outputs |
 |-------------|----------------|--------|---------|
 | **Planner Agent** | Decomposes the user’s open-ended question into a structured research plan and generates high-quality, targeted search queries. | User question | • Step-by-step research plan<br>• Curated web search queries |
@@ -14,7 +15,7 @@
 | **Retriever Agent** | Reads the retrieved sources and extracts the most relevant facts, quotes, and evidence snippets needed to answer the question. | Web search results | • Structured evidence snippets<br>• Key factual highlights |
 | **Synthesizer Agent** | Produces a coherent, professional narrative report by synthesizing the extracted evidence into plain-language analysis. | Curated evidence snippets | • Draft narrative report |
 | **Validator Agent** | Audits the synthesized report against the original sources, validating which claims are supported by evidence and flagging unsupported statements. | Draft report + evidence | • `VALID` / `INVALID` claim annotations<br>• Final verified report |
-
+  
 This creates a transparent pipeline where you can trace how a final answer was constructed.
 - **Architecture:** The system is implemented as a **stateful graph** using LangGraph.  Each node:
     - Receives a shared state object  
@@ -134,25 +135,11 @@ flowchart LR
   - Updates progress for observability  
   - Hands off to the next specialized agent
 
-- **Technologies:**
-  - **Python 3.12**
-  - **LangGraph** (agent orchestration)
-  - **LangChain + AWS Bedrock** (Claude-style chat + embeddings)
-  - **LlamaIndex** (vector storage & retrieval)
-  - **Alpha Vantage + Finnhub + SEC EDGAR APIs**
-  - **Pydantic** (structured LLM outputs)
-  - **ReportLab** (PDF generation)
-  - **Disk-based caching + manifests**
+- **Technologies:** Python 3.12, AWS, LangChain, LangGraph, LlamaIndex, Pydantic, & ReportLab.  And then AlphaVantage, Finnhub, and SEC EDGAR APIs
 
 - **Output Artifacts:**
   - Rich console logs showing progress and failures  
-  - A **sourced PDF report** including:
-    - Original question  
-    - Ticker extraction result  
-    - Deterministic financial snapshot  
-    - Retrieved evidence  
-    - LLM-written investment view  
-    - Claim validation results  
+  - A **sourced PDF report** including: Original question, ticker extraction result, deterministic financial,retrieved evidence, LLM-written investment view, & claim validation results  
 
 - **Initial Problems:**  
   I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
