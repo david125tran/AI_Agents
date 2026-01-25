@@ -81,6 +81,20 @@ flowchart LR
 
   The result is a production-style stock due diligence agent that transforms a natural-language question into a structured, cited, auditable PDF report, with clear separation between: (1) Deterministic financial facts, (2) Recent market news, (3) Semantic evidence retrieval, and (4) LLM reasoning.
   
+## 📄 Example Due Diligence Reports
+- **📟 NVDA:**  
+  [➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)  
+  <img src="./02/images/NVDA.png" width="45%" />
+
+- **✨ PLTR:**  
+  [➡️ Open full PDF report](./02/reports/PLTR_due_diligence_20260125.pdf)  
+  <img src="./02/images/PLTR.png" width="45%" />
+
+- **🚗 TSLA:**  
+  [➡️ Open full PDF report](./02/reports/TSLA_due_diligence_20260125.pdf)  
+  <img src="./02/images/TSLA.png" width="45%" />
+
+
 - **Why multi-agentization instead of 💬 “just ask ChatGPT?”:**
   - Asking a general LLM `“What stock should I buy?”` has several fundamental limitations:
     - **No control over evidence**. The model is trained on old outdated data & the data it sees may not be factual
@@ -178,19 +192,6 @@ flowchart LR
     - Retrieved evidence  
     - LLM-written investment view  
     - Claim validation results  
-
-## 📄 Example Due Diligence Reports
-- **📟 NVDA:**  
-  [➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)  
-  <img src="./02/images/NVDA.png" width="45%" />
-
-- **✨ PLTR:**  
-  [➡️ Open full PDF report](./02/reports/PLTR_due_diligence_20260125.pdf)  
-  <img src="./02/images/PLTR.png" width="45%" />
-
-- **🚗 TSLA:**  
-  [➡️ Open full PDF report](./02/reports/TSLA_due_diligence_20260125.pdf)  
-  <img src="./02/images/TSLA.png" width="45%" />
 
 - **Initial Problems:**  
   I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
