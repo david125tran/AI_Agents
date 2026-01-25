@@ -81,7 +81,7 @@ flowchart LR
 
   The result is a production-style stock due diligence agent that transforms a natural-language question into a structured, cited, auditable PDF report, with clear separation between: (1) Deterministic financial facts, (2) Recent market news, (3) Semantic evidence retrieval, and (4) LLM reasoning.
   
-## 📄 Example Due Diligence Reports
+## 📄 Example Output Due Diligence PDF Reports
 - **📟 NVDA:**  
   [➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)  
   <img src="./02/images/NVDA.png" width="45%" />
