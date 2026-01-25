@@ -131,10 +131,8 @@ flowchart LR
     - I then added metadata tags so that I could filter my retrievals later on prior to sending data to the LLM
 
   - **Semantic Retrieval with Metadata Guardrails:**  
-    - Rather than relying on pure similarity search alone, this system uses semantic retrieval as a candidate generator and then **applies metadata-based guardrails to control what evidence is allowed to reach the LLM** (i.e. filter for news recency). Query embeddings retrieve the most relevant chunks from local vector indexes, after which results are filtered and constrained using structured metadata. In particular, retrieval is split across two dedicated indexes-one for deterministic facts and one for recent news-and additional hard filters are applied for news recency, chunk identity deduplication, and source attribution. This ensures the LLM reasons over evidence that is not only semantically relevant, but also recent, stable, and contextually valid. By combining vector similarity with deterministic metadata constraints, the retrieval layer avoids stale or misleading context while remaining fast and production-ready.
-    - Retrieval is run separately over:
-      - a *deterministic facts index* (for stable truths), and  
-      - a *news index* (for recent developments).  
+  Semantic search is used as a **candidate generator**, not the final authority. Query embeddings retrieve relevant chunks from two local vector indexes—one for deterministic financial facts and one for recent news. Before any evidence reaches the LLM, results are **filtered using structured metadata** (recency constraints, deduplication, and source attribution).  
+  This ensures the model reasons only over evidence that is relevant, recent, and contextually valid, while avoiding stale or misleading information.
 
   - **Reliability & Observability:**  
     - For this script, I was caching API call data to local memory with time to live variables to save on $ and to perform less API calls.  This is because I'm using the free tier for the API calls.
@@ -147,33 +145,16 @@ flowchart LR
     - A validator agent performs a lightweight “claim audit,” marking which lines are supported by at least one verifiable source URL.
 
 - **🤖 Agent roles (what the agent does end-to-end):**
-  - **Orchestrator Agent**  
-     - Extracts exactly one ticker from the user question (or asks a single clarification).  
-     - Generates targeted retrieval queries.
+| Agent | Primary Responsibility | Key Outputs |
+|------|------------------------|-------------|
+| **Orchestrator** | Entry point for the workflow. Extracts exactly one ticker from the user question and coordinates downstream agents. | Validated ticker, targeted retrieval queries |
+| **Deterministic Analyst** | Fetches structured, factual financial data from trusted APIs (Alpha Vantage, SEC EDGAR) and normalizes it into a stable snapshot. | Prices, fundamentals, filings summary |
+| **News Agent** | Collects recent company news with explicit time bounds, caching, and deduplication. | Curated set of recent news articles |
+| **Archiver (Local RAG)** | Builds and maintains local vector indexes for both deterministic facts and news, using content hashes to avoid redundant embeddings. | Two local vector stores (`deterministic/`, `news/`) |
+| **Retriever** | Performs semantic search over both indexes and applies metadata filters (recency, deduplication, source constraints). | Curated evidence set for reasoning |
+| **Advisor** | Uses the curated evidence to generate a structured investment analysis with explicit citations. | Rating, risks, key drivers, confidence, gaps |
+| **Validator** | Audits each claim in the report to ensure it is supported by at least one verifiable source. | Claim audit section with citation coverage |
 
-  - **Deterministic Analyst Agent**  
-     - Pulls structured data from Alpha Vantage (prices, overview, financials) and SEC filings.  
-     - Normalizes and summarizes this into a compact snapshot.
-
-  - **News Agent**  
-     - Fetches up to 12 months of company news from Finnhub with caching + deduplication.
-
-  - **Archiver Agent (Local RAG layer)**  
-     - Builds two local vector indexes:
-       - `news/` → chunked recent articles  
-       - `deterministic/` → latest financial facts  
-     - Uses content hashes to avoid redundant embeddings.
-
-  - **Retriever Agent**  
-     - Runs semantic search over both indexes.  
-     - Filters old news, deduplicates chunks, and keeps only the most relevant evidence.
-
-  - **Advisor Agent**  
-     - Receives a compact market snapshot + curated evidence.  
-     - Produces a structured report (rating, risks, key drivers, confidence, gaps) with citations.
-
-  - **Validator Agent**  
-     - Audits each claim for source presence and appends a “Claim Audit” section.
 
 - **Architecture:**  
   The system is implemented as a **stateful LangGraph workflow** where each node:
