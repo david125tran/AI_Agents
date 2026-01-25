@@ -200,7 +200,12 @@ flowchart LR
 
 </div>
 
+### 📄 Example Due Diligence Reports
+- **NVDA:**
+[➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)
 
+<img src="./02/images/01.png" width="45%" />
+<img src="./02/images/02.png" width="45%" />
 
 - **Initial Problems:**  
   I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
