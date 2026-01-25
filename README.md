@@ -77,42 +77,45 @@ flowchart LR
 ---
 
 ## ⭐ 02: Stock Due Diligence Agent (LangGraph + AWS Bedrock + Local RAG)
+- **Project Overview:**  This project explores 🤖 **AI agentization as a system design pattern**, rather than treating LLMs as single-shot answer generators. Instead of asking one model a broad question like “What stock should I buy right now?”-which typically produces an opaque, non-reproducible response-this system is intentionally structured as a **multi-agent workflow** where each agent has a narrow, well-defined responsibility.  
 
-- **Project Overview:**  
-  This folder contains a **evidence-grounded stock due diligence agent** that transforms a single natural-language question (e.g., *“Is Microsoft a good buy for the next 2 years?”*) into a structured, sourced, auditable PDF report. Rather than sending everything to one LLM in a massive context window, I deliberately decomposed the problem into a **multi-step LangGraph workflow** that separates:
-  - deterministic data collection (factual data)
-  - news gathering (market sentiment)
-  - local semantic retrieval  
-  - LLM reasoning
+  The result is a production-style stock due diligence agent that transforms a natural-language question into a structured, cited, auditable PDF report, with clear separation between: (1) Deterministic financial facts, (2) Recent market news, (3) Semantic evidence retrieval, and (4) LLM reasoning.
+  
+- **Why multi-agentization instead of 💬 “just ask ChatGPT?”:**
+  - Asking a general LLM `“What stock should I buy?”` has several fundamental limitations:
+    - **No control over evidence**. The model is trained on old outdated data & the data it sees may not be factual
+    - **No separation between facts and reasoning**.  Market data, news, and analysis are blended together in one opaque response.
+    - **No auditability**
+    - **High variance**. The same question asked twice can yield materially different answers.
 
-  The design prioritizes **reliability, traceability, and repeatability**-the same concerns that matter in enterprise settings where hallucinations, stale data, and brittle prompts are unacceptable. The system behaves less like a chatbot and more like a miniature internal research platform.  My script currently takes in a natural-language question to form the PDF because I want to eventually configure this to a front-end webapp with multiple agents in it working together where the user can query for more questions.  
+  - Rather than relying on a single model to “do everything at once,” the workflow decomposes the task into specialized agents coordinated by LangGraph. This mirrors how real research and analytics teams operate: data collection first, evidence curation second, analysis last.
+    - Deterministic agents fetch structured financial data from trusted APIs (Alpha Vantage + SEC).
+    - A dedicated news agent gathers recent, bounded market context with explicit recency constraints.
+    - The LLM is used strictly for reasoning and synthesis, not data acquisition.
+    - A validator agent performs a lightweight claim audit, making reasoning inspectable rather than implicit.
+  - This design produces outputs that are **more stable, more explainable, and more reusable** than a single-shot LLM answer.
+  - I built this agentic workflow to create an auditable research system to do due dillegence on stocks for me because I just don't have the time to do the research.  I stay pretty busy between work, jiu-jitsu, and constantly programming.  
 
-- **Intentional Design Choices:**
-  - **Separation of concerns:**  
-    - Deterministic data (Alpha Vantage + SEC) is collected and summarized *before* any LLM reasoning.  
-    - News is treated as a distinct information layer with its own retrieval strategy.  
-    - The LLM only reasons over *curated, compact* inputs instead of raw APIs or documents.
+- **🏗️ Intentional Design Choices:**
+  - **Separation of concerns:**  I intentionally segregated factual data from news (which could cause noise)
+    - Factual/deterministic data is collected from Alpha Vantage + SEC through API calls
+    - Recent news is collected from FinnHub API call because Finnhub allows me to select articles from a date range through the call 
 
   - **Deliberate chunking strategy:**  
-    - News articles are embedded as **small, focused chunks** (headline + summary + metadata) instead of full articles.  
-    - Financial data is collapsed into a **stable “latest facts” snapshot** rather than embedding full statements.  
-    - A manifest of content hashes prevents unnecessary re-embedding-mirroring real production indexing pipelines.
+    - Two separate vector indexes:
+        - `deterministic/` - **Financial facts** (Alpha Vantage + SEC data API call)
+        - `news/` → **Recent news articles** (Finnhub API call).  The system only surfaces news from the last 365 days and caps total articles, avoiding “recency noise."
+    - I then added metadata tags so that I could filter my retrievals later on prior to sending data to the LLM
 
   - **Semantic Retrieval with Metadata Guardrails:**  
     - Rather than relying on pure similarity search alone, this system uses semantic retrieval as a candidate generator and then **applies metadata-based guardrails to control what evidence is allowed to reach the LLM** (i.e. filter for news recency). Query embeddings retrieve the most relevant chunks from local vector indexes, after which results are filtered and constrained using structured metadata. In particular, retrieval is split across two dedicated indexes-one for deterministic facts and one for recent news-and additional hard filters are applied for news recency, chunk identity deduplication, and source attribution. This ensures the LLM reasons over evidence that is not only semantically relevant, but also recent, stable, and contextually valid. By combining vector similarity with deterministic metadata constraints, the retrieval layer avoids stale or misleading context while remaining fast and production-ready.
     - Retrieval is run separately over:
       - a *deterministic facts index* (for stable truths), and  
       - a *news index* (for recent developments).  
-    - Results are deduplicated, ranked, and filtered before reaching the LLM.
 
-
-  - **Intentional news filtering:**  
-    - The system only surfaces news from the last 365 days and caps total articles, avoiding “recency noise.”  
-    - This mirrors how analysts actually work: focus on material, recent events rather than flooding the model with every headline.
-
-  - **Enterprise-style reliability:**  
-    - Aggressive disk caching with time to live variables for every API.  
-    - Graceful fallback to stale cache when external services fail.  
+  - **Reliability & Observability:**  
+    - For this script, I was caching API call data to local memory with time to live variables to save on $ and to perform less API calls.  This is because I'm using the free tier for the API calls.
+    - When the API calls would fail, I scripted in a graceful fallback to using older/stale cache data
     - Exponential backoff on Bedrock throttling.  
     - Progress tracking across the entire graph for observability.
 
@@ -120,33 +123,33 @@ flowchart LR
     - The report requires inline citations like `[chunk_id]`.  
     - A validator agent performs a lightweight “claim audit,” marking which lines are supported by at least one verifiable source URL.
 
-- **Highlights (what the agent does end-to-end):**
-  1. **Orchestrator Agent**  
+- **🤖 Agent roles (what the agent does end-to-end):**
+  - **Orchestrator Agent**  
      - Extracts exactly one ticker from the user question (or asks a single clarification).  
      - Generates targeted retrieval queries.
 
-  2. **Deterministic Analyst Agent**  
+  - **Deterministic Analyst Agent**  
      - Pulls structured data from Alpha Vantage (prices, overview, financials) and SEC filings.  
      - Normalizes and summarizes this into a compact snapshot.
 
-  3. **News Agent**  
+  - **News Agent**  
      - Fetches up to 12 months of company news from Finnhub with caching + deduplication.
 
-  4. **Archiver Agent (Local RAG layer)**  
+  - **Archiver Agent (Local RAG layer)**  
      - Builds two local vector indexes:
        - `news/` → chunked recent articles  
        - `deterministic/` → latest financial facts  
      - Uses content hashes to avoid redundant embeddings.
 
-  5. **Retriever Agent**  
+  - **Retriever Agent**  
      - Runs semantic search over both indexes.  
      - Filters old news, deduplicates chunks, and keeps only the most relevant evidence.
 
-  6. **Advisor Agent**  
+  - **Advisor Agent**  
      - Receives a compact market snapshot + curated evidence.  
      - Produces a structured report (rating, risks, key drivers, confidence, gaps) with citations.
 
-  7. **Validator Agent**  
+  - **Validator Agent**  
      - Audits each claim for source presence and appends a “Claim Audit” section.
 
 - **Architecture:**  
