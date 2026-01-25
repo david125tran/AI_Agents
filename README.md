@@ -144,7 +144,8 @@ flowchart LR
     - The report requires inline citations like `[chunk_id]`.  
     - A validator agent performs a lightweight “claim audit,” marking which lines are supported by at least one verifiable source URL.
 
-- **🤖 Agent roles (what the agent does end-to-end):**
+- **🤖 Agent roles (what the agent does end-to-end):**  
+  
 | Agent | Primary Responsibility | Key Outputs |
 |------|------------------------|-------------|
 | **Orchestrator** | Entry point for the workflow. Extracts exactly one ticker from the user question and coordinates downstream agents. | Validated ticker, targeted retrieval queries |
