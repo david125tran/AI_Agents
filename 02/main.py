@@ -1,3 +1,5 @@
+# ./main.py
+
 """
 Stock Due Diligence Pipeline (LangGraph + Bedrock + Local RAG)
 
@@ -82,18 +84,13 @@ from pathlib import Path
 from pydantic import BaseModel, Field, PrivateAttr
 import random
 import re
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.pagesizes import LETTER
-from reportlab.lib.units import inch
-from reportlab.platypus import PageBreak
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.colors import HexColor
 import requests
 from textwrap import shorten
 import time
 from typing import Any, Dict, List, Optional, TypedDict
 import warnings
+
+from renderers.report_pdf import save_report_pdf
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
@@ -111,7 +108,7 @@ parent_dir = script_dir.parent
 # Environment variables path
 DOTENV_PATH = parent_dir / ".env"
 
-# Email for sec.gov endpoint
+# Email for sec.gov API endpoint
 EMAIL = "david125tran@gmail.com"
 
 # Environment variable names from .env
@@ -122,7 +119,7 @@ ALPHA_VANTAGE_KEY = "ALPHA_VANTAGE_KEY"
 FINNHUB_API_KEY = "FINNHUB_API_KEY"
 
 # LLM settings
-LLM_TEMPERATURE = 0.0
+LLM_TEMPERATURE = 0.0                           # Force a deterministic output
 
 # Retries and backoffs for LLM api calls
 LLM_MAX_RETRIES = 50
@@ -130,7 +127,7 @@ LLM_BACKOFF_BASE_SLEEP_S = 2
 LLM_BACKOFF_MAX_SLEEP_S = 60.0
 
 # News knobs (lookback window, max articles, dedup)
-NEWS_LOOKBACK_DAYS = 365                        # Look for fresh articles
+NEWS_LOOKBACK_DAYS = 365                        # Cutoff to look for fresh articles
 NEWS_MAX_ARTICLES = 100                         # Keep only the most recent N articles
 NEWS_DEDUP_BY_URL = True                        # Dedup duplicate urls
 
@@ -139,7 +136,8 @@ EMBED_MODEL_ID = "amazon.titan-embed-text-v2:0"
 EMBED_MIN_INTERVAL_S = 2.0                      # slower = safer
 EMBED_BATCH_SIZE = 1                            # smaller batches reduce throttling
 
-# Progress weights to gauge how far along the script is
+# Progress weights to gauge how far along the script is.  These weights are empirical guesses as to
+# how much time each step takes relative to the others to gauge how far along the script is.
 PROGRESS_WEIGHTS = {
     "orchestrator": 5,                          
     "clarifier": 5,                             
@@ -162,7 +160,9 @@ def get_logger(name: str = __name__):
     Intended for scripts where you want readable, timestamped progress output.
     """
 
+    # Create logger
     logger = logging.getLogger(name)
+    # If no handlers, set up console handler
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
@@ -174,7 +174,7 @@ def get_logger(name: str = __name__):
         logger.addHandler(handler)
     return logger
 
-
+# Module-level logger
 logger = get_logger("ai_pipeline")
 
 
@@ -184,11 +184,14 @@ def log_timing(step: str):
     Context manager that logs START/END messages with elapsed time.
     Use this to track runtime.
     """
+    # Initialize timer
     t0 = time.perf_counter()
+    # Log start of step
     logger.info("START %s", step)
     try:
         yield
     finally:
+        # Measure the elapsed time
         elapsed_s = time.perf_counter() - t0
         logger.info("END   %s (%.2fs)", step, elapsed_s)
 
@@ -239,6 +242,7 @@ def _is_throttle_error(e: Exception) -> bool:
     """
 
     msg = str(e).lower()
+    # Check for common throttling indicators
     return (
         "throttl" in msg
         or "too many requests" in msg
@@ -248,7 +252,6 @@ def _is_throttle_error(e: Exception) -> bool:
 
 
 def invoke_with_backoff(
-        
     runnable,
     messages,
     *,
@@ -275,17 +278,21 @@ def invoke_with_backoff(
         The runnable.invoke(...) result.
     """
 
+    # Initialize last error for raising if all retries fail
     last_err = None
+    # Retry loop that tries up to max_retries times
     for attempt in range(1, max_retries + 1):
+        # Try to invoke the model
         try:
+            # Return the message if successful
             return runnable.invoke(messages)
         except Exception as e:
             last_err = e
-            msg = str(e)
-
+            msg = str(e).lower()
+            # Check for common throttling indicators
             is_throttle = (
-                "ThrottlingException" in msg
-                or "Too many requests" in msg
+                "throttlingexception" in msg
+                or "too many requests" in msg
                 or "reached max retries" in msg
                 or "throttl" in msg.lower()
             )
@@ -293,6 +300,7 @@ def invoke_with_backoff(
             if not is_throttle:
                 raise  # not throttling, bubble up
 
+            # Exponential backoff sleep
             sleep_s = min(max_sleep_s, base_sleep_s * (2 ** (attempt - 1)))
             logger.warning(
                 "%s | Bedrock throttled. Sleep %.1fs (attempt %d/%d)",
@@ -310,9 +318,11 @@ def progress_init(state: Dict[str, Any]) -> Dict[str, Any]:
     The progress structure is used across LangGraph nodes to compute a coarse
     percent-complete using PROGRESS_WEIGHTS.
     """
-
+    # Create the progress dictionary if it doesn't exist and ensure required keys
+    # are present.  
     if "progress" not in state or not isinstance(state.get("progress"), dict):
         state["progress"] = {"done": [], "weight_done": 0, "pct": 0.0, "stage": "start"}
+    # Return the (possibly modified) state
     return state
 
 
@@ -329,24 +339,27 @@ def progress_mark(state: Dict[str, Any], node: str, extra: Optional[Dict[str, An
         A new state dict with updated `progress`.
     """
 
+    # Get existing progress
     state = dict(state)
+    # Initialize progress dictionary if it doesn't exist
     p = dict(state.get("progress") or {})
+    # Ensure required keys
     p.setdefault("done", [])
     p.setdefault("weight_done", 0)
     p.setdefault("pct", 0.0)
-
+    # Update done list and weight
     if node not in p["done"]:
         p["done"].append(node)
         p["weight_done"] += PROGRESS_WEIGHTS.get(node, 1)
-
+    # Update stage and percent
     p["stage"] = node
     den = TOTAL_WEIGHT or 1
     p["pct"] = round(100.0 * p["weight_done"] / den, 1)
-
+    # Add any extra metadata
     if extra:
         for k, v in extra.items():
             p[k] = v
-
+    # Store back in state
     state["progress"] = p
     logger.info("PROGRESS %s%% | stage=%s", p["pct"], node)
     return state
@@ -375,21 +388,23 @@ def fetch_finnhub_company_news_last_12m(
         articles, and a `source` block describing URL + cache metadata.
     """
 
+    # Normalize the ticker for finnhub
+    tkr = ticker.strip().upper()
 
-    tkr = (ticker or "").strip().upper()
-    if not tkr:
-        return {"ticker": None, "articles": [], "error": "missing ticker"}
-
+    # Validate API key
     if not finnhub_api_key:
         return {"ticker": tkr, "articles": [], "error": "missing finnhub_api_key"}
 
+    # Compute date window
     if today_utc is None:
         today_utc = dt.datetime.utcnow().date()
 
+    # Last 12 months
     start_date = today_utc - dt.timedelta(days=365)
     from_s = start_date.isoformat()
     to_s = today_utc.isoformat()
 
+    # Timestamp pulled
     pulled_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     window_key = "company_news"
@@ -422,6 +437,7 @@ def fetch_finnhub_company_news_last_12m(
         sleep_s = 1.0
         last_err = None
 
+        # Retry loop that tries up to max_retries times
         for attempt in range(1, max_attempts + 1):
             try:
                 r = requests.get(
@@ -464,7 +480,8 @@ def fetch_finnhub_company_news_last_12m(
         raise last_err
 
 
-    # 1) Cache hit
+    # If the cache file exists and is fresh, return the cached payload with cache metadata rather than
+    # fetching from the API to save money. 
     if path.exists() and is_fresh(path, ttl_s):
         cached = read_json(path)
         if cached is not None:
@@ -472,15 +489,16 @@ def fetch_finnhub_company_news_last_12m(
             cached["source"]["cache"] = {"hit": True, "path": str(path), "ttl_s": ttl_s}
             return cached
 
-    # 2) Fetch
+    # If the cache is not hit, fetch from the Finnhub API
     base = "https://finnhub.io/api/v1"
     # Company news endpoint takes symbol + from/to + token :contentReference[oaicite:6]{index=6}
     url = f"{base}/company-news?symbol={requests.utils.quote(tkr)}&from={from_s}&to={to_s}&token={requests.utils.quote(finnhub_api_key)}"
 
+    # Fetch the payload from Finnhub
     try:
         payload = http_get_json(url)
     except Exception as e:
-        # fallback to stale cache if present
+        # Fallback to stale/old cache if present
         if path.exists():
             cached = read_json(path)
             if cached is not None:
@@ -494,24 +512,30 @@ def fetch_finnhub_company_news_last_12m(
     min_ts = int(dt.datetime.combine(start_date, dt.time.min).replace(tzinfo=dt.timezone.utc).timestamp())
     max_ts = int(dt.datetime.combine(today_utc, dt.time.max).replace(tzinfo=dt.timezone.utc).timestamp())
 
+    # Initialize articles list
     articles = []
     if isinstance(payload, list):
         for a in payload:
             if not isinstance(a, dict):
                 continue
             ts = a.get("datetime")
+            # Try to get the timestamp as an integer
             try:
                 ts_i = int(ts) if ts is not None else None
+            # If the timestamp is invalid, skip this article
             except Exception:
                 ts_i = None
 
+            # If the timestamp is outside the desired range, skip this article
             if ts_i is not None and (ts_i < min_ts or ts_i > max_ts):
                 continue
+            # Add the article to the list
             articles.append(a)
 
     # Sort newest first
     articles.sort(key=lambda a: int(a.get("datetime") or 0), reverse=True)
 
+    # Deduplicate by articles by URL if enabled
     if NEWS_DEDUP_BY_URL:
         seen = set()
         deduped = []
@@ -523,8 +547,10 @@ def fetch_finnhub_company_news_last_12m(
             deduped.append(a)
         articles = deduped
 
+    # Cap to max articles to save money
     articles = articles[:NEWS_MAX_ARTICLES] 
 
+    # Build the output dict
     out = {
         "ticker": tkr,
         "from": from_s,
@@ -550,27 +576,49 @@ def build_citation_map(evidence_rows: List[Dict[str, Any]]) -> Dict[str, Dict[st
     renderer replace them with readable labels and links.
     """
 
+    # Initialize a hash map for chunk IDs to citation metadata
     cmap: Dict[str, Dict[str, str]] = {}
+    # Example:
+
+    # cmap = {
+    #   "chunk_id::1": {
+    #       "label": "Some Article Title — Source (2023-10-01)",
+    #       "url": "https://example.com/article",
+    #       "source_type": "news",
+    #   },
+
+    # For each evidence row, extract metadata and build the citation label
     for r in evidence_rows:
+        # Extract chunk ID
         cid = (r.get("chunk_id") or "").strip()
+        # If there's no chunk ID, skip this row
         if not cid:
             continue
+        # Extract metadata
         meta = r.get("metadata") or {}
+        # Extract relevant fields
         source_type = (meta.get("source_type") or "").strip()
         title = (meta.get("title") or "").strip()
         url = (meta.get("url") or "").strip()
         published_at = (meta.get("published_at") or "").strip()
         source = (meta.get("source") or meta.get("provider") or "").strip()
 
+        # Build the citation label based on source type and metadata tag previously applied
+        # by the archiver when indexing.
         label = ""
+
+        # News articles (Finnhub API calls)
         if source_type == "news":
+            # Build the citation label for news articles (coming from Finnhub)
             if title and url:
                 label = f"{title} — {source or 'News'} ({published_at or 'n.d.'})"
             elif url:
                 label = f"{source or 'News'} ({published_at or 'n.d.'})"
+        # Deterministic data chunks (from AlphaVantage, SEC API calls)
         else:
             label = source or meta.get("provider") or "Deterministic"
 
+        # Store in the citation map
         cmap[cid] = {
             "label": label,
             "url": url,
@@ -591,17 +639,25 @@ def replace_citations(md: str, cmap: Dict[str, Dict[str, str]]) -> str:
     """
 
     def repl(m: re.Match) -> str:
+        # Extract the chunk ID from the match
         cid = m.group(1).strip()
+        # Look up the citation info in the map
         info = cmap.get(cid)
+        # If there's no info, return unmapped
         if not info:
             return f"[unmapped:{cid}]"
+        # Build the replacement string
         url = (info.get("url") or "").strip()
+        # Use the label from the citation map, or fall back to the chunk ID
         label = (info.get("label") or cid).strip()
+        # Return the appropriate markdown link format
         if url:
+            # Return a markdown link with the label and URL
             return f"[[Source: {label}]]({url})"
         return f"[Source: {label}]"
 
-    return re.sub(r"\[([^\]]+::\d+)\]", repl, md)
+    # return re.sub(r"\[([^\]]+::\d+)\]", repl, md)
+    return re.sub(r"\[([^\]]+)\]", repl, md)
 
 
 def print_run_summary(out: Dict[str, Any]) -> None:
@@ -709,148 +765,6 @@ def print_run_summary(out: Dict[str, Any]) -> None:
         print(f"    {url}")
 
     print("=" * 88 + "\n")
-
-
-# ---------------------------------- Save Report as PDF ----------------------------------
-def save_report_pdf(out: Dict[str, Any], *, script_dir: Path) -> Optional[Path]:
-    """
-    Render the final report markdown into a simple PDF using ReportLab.
-
-    Supports:
-      - '## ' headings
-      - '- ' bullets
-      - inline bold via **text**
-      - source links of the form [[Source: label]](url)
-
-    Returns:
-        Path to the generated PDF, or None if no report content exists.
-    """
-
-    report = out.get("report") or {}
-    md = (report.get("report_markdown") or "").strip()
-    if not md:
-        return None
-
-    ticker = (out.get("ticker") or "UNKNOWN").strip().upper()
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%SZ")
-
-    reports_dir = script_dir / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-
-    pdf_path = reports_dir / f"{ticker}_due_diligence_{ts}.pdf"
-
-    def _escape_para(s: str) -> str:
-        return (
-            (s or "")
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
-
-    def _convert_source_links(line: str) -> str:
-        def repl(m: re.Match) -> str:
-            label = m.group(1).strip()
-            url = m.group(2).strip()
-            return f'<a href="{url}">Source: {_escape_para(label)}</a>'
-        return re.sub(r"\[\[Source:\s*([^\]]+)\]\]\((https?://[^)]+)\)", repl, line)
-
-
-    doc = SimpleDocTemplate(
-        str(pdf_path),
-        pagesize=LETTER,
-        rightMargin=0.85 * inch,
-        leftMargin=0.85 * inch,
-        topMargin=0.85 * inch,
-        bottomMargin=0.85 * inch,
-        title=f"{ticker} Due Diligence",
-        author="Stock Research Bot",
-    )
-
-    styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        "TitleCenter",
-        parent=styles["Title"],
-        alignment=TA_CENTER,
-        textColor=HexColor("#111827"),
-        spaceAfter=16,
-    )
-
-    h2 = ParagraphStyle(
-        "H2",
-        parent=styles["Heading2"],
-        textColor=HexColor("#111827"),
-        spaceBefore=14,
-        spaceAfter=8,
-    )
-
-    body = ParagraphStyle(
-        "Body",
-        parent=styles["BodyText"],
-        fontSize=10.5,
-        leading=14,
-        textColor=HexColor("#111827"),
-        spaceAfter=6,
-    )
-
-    small = ParagraphStyle(
-        "Small",
-        parent=styles["BodyText"],
-        fontSize=9.5,
-        leading=12,
-        textColor=HexColor("#374151"),
-        spaceAfter=6,
-    )
-
-    elements: List[Any] = []
-
-    # ---- Cover ----
-    elements.append(Paragraph(f"{ticker} Due Diligence Report", title_style))
-    elements.append(Paragraph(f"<b>Generated:</b> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')} UTC", small))
-    elements.append(Paragraph(f"<b>Rating:</b> {report.get('rating','n/a')} &nbsp;&nbsp; <b>Confidence:</b> {report.get('confidence','n/a')}", small))
-    elements.append(PageBreak())
-
-    # ---- Body ----
-    bullet_buf: List[ListItem] = []
-
-    def flush_bullets():
-        nonlocal bullet_buf
-        if bullet_buf:
-            elements.append(ListFlowable(bullet_buf, bulletType="bullet", leftIndent=14))
-            bullet_buf = []
-            elements.append(Spacer(1, 6))
-
-    for raw in md.splitlines():
-        line = (raw or "").strip()
-
-        if not line:
-            flush_bullets()
-            elements.append(Spacer(1, 8))
-            continue
-
-        if line.startswith("## "):
-            flush_bullets()
-            elements.append(Paragraph(_escape_para(line[3:]), h2))
-            continue
-
-        if line.startswith("- "):
-            txt = _escape_para(line[2:].strip())
-            txt = _convert_source_links(txt)
-            bullet_buf.append(ListItem(Paragraph(txt, body)))
-            continue
-
-        flush_bullets()
-
-        txt = _escape_para(line)
-        txt = _convert_source_links(txt)
-        txt = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", txt)
-
-        elements.append(Paragraph(txt, body))
-
-    flush_bullets()
-    doc.build(elements)
-    return pdf_path
-
 
 
 # ---------------------------------- Pydantic Output Validation ----------------------------------
@@ -998,28 +912,33 @@ Settings.embed_model = RateLimitedEmbedder(
 # ---------------------------------- Define State ----------------------------------
 logger.info("Defining AgentState schema")
 
-# Shared state passed between LangGraph nodes.
 class AgentState(TypedDict, total=False):
+    """
+    The AgentState dictionary holds all inputs, outputs, and progress
+    tracking information for the LangGraph pipeline. Each node function
+    reads from and writes to this shared state.
+    """
+
     # ---- Inputs ----
-    question: str
+    question: str                                           # User query
 
     # ---- Progress / tracing ----
-    progress: Dict[str, Any]
+    progress: Dict[str, Any]                                # Progress tracking dict to gauge how far the script is in processing pdf
 
     # ---- orchestrator(): Routing ----
-    ticker: Optional[str]
-    needs_clarification: bool
-    clarification_question: str
-    queries: List[str]
+    ticker: Optional[str]                                   # Ticker symbol
+    needs_clarification: bool                               # True if clarification is needed
+    clarification_question: str                             # Question to ask user if they did not ask for exactly one ticker
+    queries: List[str]                                      # Generated retrieval queries for data_analyst()
 
     # ---- data_analyst(): Deterministic data outputs ----
-    current_price: Optional[float]                 # convenience
-    deterministic: Dict[str, Any]                  # payload
-    deterministic_meta: Dict[str, Any]             # coverage, warnings, sources, cache_root
+    current_price: Optional[float]                          # Latest stock price from Alpha Vantage api
+    deterministic: Dict[str, Any]                           # Alpha Vantage + SEC EDGAR payloads (truth data)
+    deterministic_meta: Dict[str, Any]                      # 
 
     # ---- news_fetcher(): Search recent news ----
-    news: Dict[str, Any]                 # Finnhub payload (articles, dates, source, etc.)
-    news_meta: Dict[str, Any]            # optional (counts, warnings)
+    news: Dict[str, Any]                                    # Finnhub payload (articles, dates, source, etc.).  Sentiment and current events
+    news_meta: Dict[str, Any]                               # News fetcher metadata (cache path, errors, etc.)
 
     # ---- archiver(): RAG set up ----
     index_meta: Dict[str, Any]
@@ -1065,6 +984,7 @@ def orchestrator(state: AgentState) -> AgentState:
         llm = get_llm()
         extractor = llm.with_structured_output(OrchestratorOutput)
 
+        # System prompt for ticker extraction
         prompt = (
             "You extract stock ticker symbols from user text.\n"
             "Return structured output only.\n"
@@ -1076,6 +996,7 @@ def orchestrator(state: AgentState) -> AgentState:
             "- Ask exactly ONE question when clarification is needed."
         )
 
+        # Invoke with backoff
         result: OrchestratorOutput = invoke_with_backoff(
             extractor,
             [SystemMessage(content=prompt), HumanMessage(content=question)],
@@ -1085,6 +1006,7 @@ def orchestrator(state: AgentState) -> AgentState:
             max_sleep_s=LLM_BACKOFF_MAX_SLEEP_S,
         )
 
+        # Validate output from the LLM.  If the user did not give exactly one stock, ask for clarification.
         if result.needs_clarification or result.found_multiple or not result.ticker:
             out: AgentState = {
                 **state,
@@ -1098,8 +1020,10 @@ def orchestrator(state: AgentState) -> AgentState:
             }
             return progress_mark(out, "orchestrator", {"clarify": True})
 
+        # Exactly one ticker extracted
         ticker = (result.ticker or "").strip().upper()
 
+        # Generate retrieval queries for data_analyst()
         report_queries = [
             f"{ticker} snapshot price volume market cap",
             f"{ticker} recent price trend last 3 months and 1 year",
@@ -1113,6 +1037,7 @@ def orchestrator(state: AgentState) -> AgentState:
             f"{ticker} investment conclusion is it a good buy based on evidence",
         ]
 
+        # Build output payload
         out: AgentState = {
             **state,
             "ticker": ticker,
@@ -1123,7 +1048,6 @@ def orchestrator(state: AgentState) -> AgentState:
         return progress_mark(out, "orchestrator", {"ticker": ticker, "query_count": len(report_queries)})
 
 
-
 def route_after_orchestrator(state: AgentState) -> str:
     """
     Decide the next node after orchestrator.
@@ -1131,7 +1055,8 @@ def route_after_orchestrator(state: AgentState) -> str:
     Returns:
         "clarifier" if a ticker is missing/ambiguous, otherwise "data_analyst".
     """
-
+    # Retrieve the current state and route to the next node accordingly depending
+    # on what the LLM from the orchestrator() returned.
     return "clarifier" if state.get("needs_clarification") else "data_analyst"
 
 
@@ -1144,9 +1069,14 @@ def clarifier(state: AgentState) -> AgentState:
     """
 
     with log_timing("clarifier"):
+        # Retrieve the current state
         state = progress_init(dict(state))
+        # Build the clarification output and handle if the LLM from the orchestrator did not return 
+        # a question.
         msg = state.get("clarification_question") or "Please provide exactly one stock ticker symbol."
+        # Progress log
         logger.warning("CLARIFY: %s", msg)
+        # Build output payload
         out = {**state, "needs_clarification": True, "clarification_question": msg}
         return progress_mark(out, "clarifier", {"clarify": True})
 
@@ -1167,29 +1097,28 @@ def data_analyst(state: AgentState) -> AgentState:
       - deterministic_meta: coverage + warnings + sources + cache_root
       - current_price: convenience field (if available)
     """
-
+    # Log the timing of this function
     with log_timing("data_analyst"):
+        # Retrieve the current state
         state = progress_init(dict(state))
-
+        # Extract the ticker
         ticker = (state.get("ticker") or "").strip().upper()
+        # Handle missing ticker
         if not ticker:
             out = {**state, "deterministic": {}, "deterministic_meta": {"warnings": ["missing ticker"]}}
             return progress_mark(out, "data_analyst", {"det_ok": False})
-
+        # Extract the Alpha Vantage API key from environment
         api_key = alpha_vantage_api_key
-        if not api_key:
-            out = {
-                **state,
-                "deterministic": {},
-                "deterministic_meta": {"warnings": ["missing ALPHA_VANTAGE_KEY in environment"]},
-            }
-            return progress_mark(out, "data_analyst", {"det_ok": False})
 
         pulled_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
         # ------------------------------ cache ------------------------------
+        # Cache root directory
         cache_root = script_dir / "cache"
 
+        # Create cache lifetimes for each metadata type.  This will be how long the script will allow
+        # stale data to be used before re-fetching.  I'm doing this to save $ and API calls because 
+        # I am on their free tier with limited calls per minute / day.
         ttl_seconds = {
             ("alphavantage", "GLOBAL_QUOTE"): 60 * 60 * 3,                      #  3 h
             ("alphavantage", "TIME_SERIES_DAILY_ADJUSTED"): 60 * 60 * 12,       # 12 h
@@ -1202,9 +1131,11 @@ def data_analyst(state: AgentState) -> AgentState:
         }
 
         def now_ts() -> float:
+            """Get the current timestamp in seconds."""
             return time.time()
 
         def safe_float(x):
+            """Convert x to float, or return None on failure."""
             try:
                 if x is None:
                     return None
@@ -1218,6 +1149,7 @@ def data_analyst(state: AgentState) -> AgentState:
                 return None
 
         def safe_int(x):
+            """Convert x to int, or return None on failure."""
             try:
                 if x is None:
                     return None
@@ -1231,11 +1163,13 @@ def data_analyst(state: AgentState) -> AgentState:
                 return None
 
         def cache_path(provider: str, tkr: str, key: str) -> Path:
+            """Get the cache file path for a given provider, ticker, and key."""
             safe_tkr = re.sub(r"[^A-Za-z0-9_\-\.]", "_", tkr)
             safe_key = re.sub(r"[^A-Za-z0-9_\-\.]", "_", key)
             return cache_root / provider / safe_tkr / f"{safe_key}.json"
 
         def read_json(path: Path) -> Optional[Dict[str, Any]]:
+            """Read JSON data from a file, or return None on failure."""
             try:
                 with path.open("r", encoding="utf-8") as f:
                     return json.load(f)
@@ -1243,6 +1177,7 @@ def data_analyst(state: AgentState) -> AgentState:
                 return None
 
         def write_json_atomic(path: Path, data: Dict[str, Any]) -> None:
+            """Write JSON data to a file atomically."""
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_suffix(path.suffix + ".tmp")
             with tmp.open("w", encoding="utf-8") as f:
@@ -1250,6 +1185,7 @@ def data_analyst(state: AgentState) -> AgentState:
             tmp.replace(path)
 
         def is_fresh(path: Path, ttl_s: int) -> bool:
+            """Check if a cache file is fresh based on its modification time and TTL."""
             try:
                 age = now_ts() - path.stat().st_mtime
                 return age <= float(ttl_s)
@@ -1257,6 +1193,7 @@ def data_analyst(state: AgentState) -> AgentState:
                 return False
 
         def http_get_json(url: str, *, timeout_s: float = 25.0, max_attempts: int = 6) -> Dict[str, Any]:
+            """Fetch JSON data from a URL with retries and exponential backoff."""
             sleep_s = 1.0
             last_err = None
             for attempt in range(1, max_attempts + 1):
@@ -1272,6 +1209,7 @@ def data_analyst(state: AgentState) -> AgentState:
                     try:
                         payload = r.json()
                     except Exception:
+                        # Fallback: return raw text + status code
                         payload = {"_raw_text": r.text[:2000], "_status_code": r.status_code}
 
                     if r.status_code in (429, 500, 502, 503, 504):
@@ -1279,6 +1217,7 @@ def data_analyst(state: AgentState) -> AgentState:
 
                     return payload
                 except Exception as e:
+                    # Backoff with exponential delay + jitter
                     last_err = e
                     jitter = random.uniform(0, 0.25 * sleep_s)
                     delay = min(30.0, sleep_s + jitter)
@@ -1291,6 +1230,7 @@ def data_analyst(state: AgentState) -> AgentState:
             raise last_err
 
         def av_url(function: str, **params) -> str:
+            """Construct an Alpha Vantage API URL with the given function and parameters."""
             base = "https://www.alphavantage.co/query"
             parts = [f"function={function}", f"apikey={api_key}"]
             for k, v in params.items():
@@ -1300,6 +1240,7 @@ def data_analyst(state: AgentState) -> AgentState:
             return base + "?" + "&".join(parts)
 
         def av_error(payload: Dict[str, Any]) -> Optional[str]:
+            """Check for Alpha Vantage error messages in the payload."""
             if not isinstance(payload, dict):
                 return "Alpha Vantage payload not a dict"
             if "Error Message" in payload:
@@ -1770,7 +1711,29 @@ def data_analyst(state: AgentState) -> AgentState:
         except Exception as e:
             warnings_list.append(f"Sanity checks failed: {e}")
 
-        # ------------------------------ finalize ------------------------------
+
+        def compact_market_snapshot(d: Dict[str, Any]) -> Dict[str, Any]:
+            ms = d.get("market_snapshot") or {}
+            cs = d.get("capital_structure") or {}
+            dm = d.get("derived_metrics") or {}
+            return {
+                "price": ms.get("price"),
+                "previous_close": ms.get("previous_close"),
+                "volume": ms.get("volume"),
+                "as_of": ms.get("as_of"),
+                "company_name": cs.get("company_name"),
+                "sector": cs.get("sector"),
+                "industry": cs.get("industry"),
+                "shares_outstanding": cs.get("shares_outstanding"),
+                "market_cap_reported": cs.get("market_cap_reported"),
+                "market_cap_calculated": dm.get("market_cap_calculated"),
+                "net_debt": dm.get("net_debt"),
+                "free_cash_flow_ttm": dm.get("free_cash_flow_ttm"),
+            }
+
+        # Final compact snapshot for the final pdf
+        deterministic["snapshot"] = compact_market_snapshot(deterministic)
+
         deterministic_meta = {
             "ticker": ticker,
             "pulled_at": pulled_at,
@@ -1807,18 +1770,13 @@ def news_fetcher(state: AgentState) -> AgentState:
       - news_meta: counts + cache hit/stale flags
     """
 
+    # Log the timing of this function
     with log_timing("news_fetcher"):
+        # Retrieve the current state
         state = progress_init(dict(state))
         ticker = (state.get("ticker") or "").strip().upper()
 
-        if not ticker:
-            out = {**state, "news": {"articles": [], "error": "missing ticker"}}
-            return progress_mark(out, "news_fetcher", {"news_ok": False})
-
-        if not finnhub_api_key:
-            out = {**state, "news": {"articles": [], "error": "missing FINNHUB_API_KEY"}}
-            return progress_mark(out, "news_fetcher", {"news_ok": False})
-
+        # Get the news using Finnhub for the last 12 months. 
         news = fetch_finnhub_company_news_last_12m(
             ticker=ticker,
             finnhub_api_key=finnhub_api_key,
@@ -1828,7 +1786,7 @@ def news_fetcher(state: AgentState) -> AgentState:
         articles = news.get("articles") or []
         cache = (news.get("source") or {}).get("cache") or {}
 
-        # This is the line you want every run:
+        # Log the news fetch result
         logger.info(
             "NEWS | ticker=%s | n=%d | cache_hit=%s | stale=%s | error=%s",
             ticker,
@@ -1838,6 +1796,7 @@ def news_fetcher(state: AgentState) -> AgentState:
             news.get("error"),
         )
 
+        # Update the state with news and metadata
         out = {
             **state,
             "news": news,
@@ -1863,13 +1822,12 @@ def archiver(state: AgentState) -> AgentState:
     Uses per-doc hashes in a manifest to avoid re-embedding unchanged content.
     """
 
+    # Log the timing of this function
     with log_timing("archiver"):
+        # Retrieve the current state
         state = progress_init(dict(state))
 
         ticker = (state.get("ticker") or "").strip().upper()
-        if not ticker:
-            out = {**state, "index_meta": {"error": "missing ticker"}}
-            return progress_mark(out, "archiver", {"index_ok": False})
 
         base_dir = script_dir / "cache" / "vector" / ticker
         news_dir = base_dir / "news"
@@ -1880,29 +1838,35 @@ def archiver(state: AgentState) -> AgentState:
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         def sha(s: str) -> str:
+            """Convert the string s to a SHA256 hex digest so that it's easy to compare for changes."""
             return hashlib.sha256((s or "").encode("utf-8")).hexdigest()
 
         def load_manifest(path: Path) -> Dict[str, str]:
+            """Load a manifest file mapping doc_id to doc_hash, or return empty dict on failure."""
             try:
                 return json.loads(path.read_text(encoding="utf-8"))
             except Exception:
                 return {}
 
         def save_manifest(path: Path, data: Dict[str, str]) -> None:
+            """Save a manifest file mapping doc_id to doc_hash atomically."""
             tmp = path.with_suffix(".tmp")
             tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(path)
 
         def try_load_index(persist_dir: Path) -> Optional[VectorStoreIndex]:
+            """Try to load an existing index from the given directory, or return None on failure."""
             try:
                 sc = StorageContext.from_defaults(persist_dir=str(persist_dir))
                 return load_index_from_storage(sc)
             except Exception:
                 return None
 
+        # Chunker for splitting article text
         splitter = SentenceSplitter(chunk_size=900, chunk_overlap=120)
 
         def article_doc(a: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            """Convert a Finnhub article dict to a text+metadata document, or None if invalid."""
             url = (a.get("url") or "").strip()
             title = (a.get("headline") or "").strip()
             summary = (a.get("summary") or "").strip()
@@ -1947,6 +1911,7 @@ def archiver(state: AgentState) -> AgentState:
             return {"text": text, "metadata": meta}
 
         def deterministic_facts(det: Dict[str, Any]) -> Dict[str, Any]:
+            """Convert the deterministic payload to a single text+metadata document of key facts."""
             facts: List[str] = []
             ms = det.get("market_snapshot") or {}
             dm = det.get("derived_metrics") or {}
@@ -2123,19 +2088,15 @@ def searcher(state: AgentState) -> AgentState:
       - evidence: list of chunks w/ metadata and score
       - evidence_meta: summary of retrieval coverage
     """
-
+    
+    # Log the timing of this function
     with log_timing("searcher"):
+        # Retrieve the current state
         state = progress_init(dict(state))
 
         ticker = (state.get("ticker") or "").strip().upper()
-        if not ticker:
-            out = {**state, "evidence": [], "evidence_meta": {"error": "missing ticker"}}
-            return progress_mark(out, "searcher", {"evidence_ok": False})
 
         queries = state.get("queries") or []
-        if not queries:
-            out = {**state, "evidence": [], "evidence_meta": {"error": "no queries"}}
-            return progress_mark(out, "searcher", {"evidence_ok": False})
 
         base_dir = script_dir / "cache" / "vector" / ticker
         news_dir = base_dir / "news"
@@ -2234,14 +2195,12 @@ def advisor(state: AgentState) -> AgentState:
     Post-processing:
       - convert [chunk_id] citations to readable [[Source: ...]](url) links
     """
-
+    # Log the timing of this function
     with log_timing("advisor"):
+        # Retrieve the current state
         state = progress_init(dict(state))
 
         ticker = (state.get("ticker") or "").strip().upper()
-        if not ticker:
-            out = {**state, "report": {"error": "missing ticker"}}
-            return progress_mark(out, "advisor", {"report_ok": False})
 
         det = state.get("deterministic") or {}
         evidence = state.get("evidence") or []
@@ -2269,6 +2228,8 @@ def advisor(state: AgentState) -> AgentState:
                 "free_cash_flow_ttm": dm.get("free_cash_flow_ttm"),
             }
 
+        # Only send a compact snapshot of key deterministic facts to the LLM.  The rest of the data that was 
+        # previously pulled from the AlphaVantage and SEC APIs will be added to the final pdf.  
         snapshot = compact_market_snapshot(det)
 
         def shrink_chunks(rows: List[Dict[str, Any]], max_items: int = 35, max_chars: int = 900) -> List[Dict[str, Any]]:
@@ -2494,7 +2455,7 @@ graph = builder.compile()
 logger.info("Invoking graph with initial state")
 
 # Initialize 
-initial_state = {"question": "How is the Palanatir stock?"}
+initial_state = {"question": "How is the tesla stock?"}
 out = graph.invoke(initial_state)
 
 
@@ -2515,7 +2476,6 @@ logger.info("NEWS (final) | n=%d | cache_hit=%s | error=%s", len(articles), cach
 
 
 # ---------------------------------- Save as PDF ----------------------------------
+# Send the payload to the PDF renderer
 saved_pdf = save_report_pdf(out, script_dir=script_dir)
-
-if saved_pdf:
-    logger.info("Saved report PDF: %s", saved_pdf)
+logger.info("Saved report PDF: %s", saved_pdf)
