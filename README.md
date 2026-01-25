@@ -7,40 +7,24 @@
 ## ⭐ 01: Market Research Multi-Agent System (LangGraph) 
 - **Project Overview:** This repository contains a prototype **multi-agent AI research system** built with **LangGraph** that demonstrates how a structured team of LLM agents can collaboratively reason, search the web, extract evidence, synthesize insights, and validate claims.  The goal of this project is to explore how agentic workflows can turn an open-ended question into a well-structured, evidence-based report in a transparent and auditable way.  I intentionally structured this as a multi-agent system rather than sending everything to one model in a huge prompt and having long context degradation (inducing hallucinations).  By splitting the tasks, I get cleaner reasoning, better grounding, and more predictable outputs.  
 - **Highlights:** Given a user question (e.g., *“Summarize recent trends in GLP-1 obesity drugs and their market impact”*), the system runs through a sequence of specialized agents:
-    - **Planner Agent:** Breaks the question into:
-        - A clear step-by-step plan  
-        - A set of high-quality web search queries  
-    - **Search Agent:** Uses the Tavily web search API to gather real, up-to-date sources relevant to the question.
-    - **Retriever Agent:** Reads the search results and extracts:
-        - Key facts  
-        - Relevant quotes  
-        - Important evidence snippets  
-    - **Synthesizer Agent:** Writes a clear, professional narrative report in plain prose based on the retrieved evidence.
-    - **Validator Agent:** Checks the synthesized report against the original sources and produces a list of:
-        - `VALID:` claims that are supported  
-        - `INVALID:` claims that are not clearly backed by evidence  
+| Agent / Node | Responsibility | Inputs | Outputs |
+|-------------|----------------|--------|---------|
+| **Planner Agent** | Decomposes the user’s open-ended question into a structured research plan and generates high-quality, targeted search queries. | User question | • Step-by-step research plan<br>• Curated web search queries |
+| **Search Agent** | Executes live web searches using the Tavily API to retrieve recent, relevant sources aligned with the planner’s queries. | Search queries | • Raw web search results (URLs + snippets) |
+| **Retriever Agent** | Reads the retrieved sources and extracts the most relevant facts, quotes, and evidence snippets needed to answer the question. | Web search results | • Structured evidence snippets<br>• Key factual highlights |
+| **Synthesizer Agent** | Produces a coherent, professional narrative report by synthesizing the extracted evidence into plain-language analysis. | Curated evidence snippets | • Draft narrative report |
+| **Validator Agent** | Audits the synthesized report against the original sources, validating which claims are supported by evidence and flagging unsupported statements. | Draft report + evidence | • `VALID` / `INVALID` claim annotations<br>• Final verified report |
 
 This creates a transparent pipeline where you can trace how a final answer was constructed.
 - **Architecture:** The system is implemented as a **stateful graph** using LangGraph.  Each node:
     - Receives a shared state object  
     - Modifies only its relevant fields  
     - Passes the updated state forward  
-- **Technologies:**
-    - **Python 3.12**
-    - **LangGraph** (for agent orchestration)
-    - **LangChain + OpenAI (GPT-4.1-mini)**  
-    - **Tavily Web Search API**
-    - **Pydantic** (for structured LLM outputs)
-    - **ReportLab** (for PDF reporting)
+- **Technologies:** Python 3.12, LangGraph, LangChain, OpenAI, Pydantic, ReportLab, Tavily Web Search API
+
 - **Output Artifacts:**
     - **Console output** showing each agent’s intermediate results  
-    - **A structured PDF report** containing:
-        - The original question  
-        - The planner’s reasoning  
-        - Web search results  
-        - Extracted evidence  
-        - Final synthesized report  
-        - Claim validation results  
+    - **A structured PDF report** containing: The original question ,the planner’s reasoning, web search results, extracted evidence, final synthesized report, & claim validation results  
 
 <br><img src="https://github.com/david125tran/AI_Agents/blob/main/01/output/screenshot.png?raw=true" width="500"/>
 
