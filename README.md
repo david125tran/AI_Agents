@@ -83,26 +83,7 @@ flowchart LR
   
 ## 📄 Example Output Due Diligence PDF Reports
   `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API (because I'm on free tier) and appending warnings to the report, lol. If you download the pdf, the news links should be clickable.`
-
-<table>
-  <tr>
-    <td align="center">
-      <b>📟 NVDA</b><br/>
-      <a href="./02/reports/NVDA_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
-      <img src="./02/images/NVDA.png" width="350"/>
-    </td>
-    <td align="center">
-      <b>✨ PLTR</b><br/>
-      <a href="./02/reports/PLTR_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
-      <img src="./02/images/PLTR.png" width="350"/>
-    </td>
-    <td align="center">
-      <b>🚗 TSLA</b><br/>
-      <a href="./02/reports/TSLA_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
-      <img src="./02/images/TSLA.png" width="350"/>
-    </td>
-  </tr>
-</table>
+<table><tr><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/NVDA_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA.png?raw=true" width="140"/></a><br/><sub>📟 NVDA</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/PLTR.png?raw=true" width="140"/></a><br/><sub>✨ PLTR</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/TSLA.png?raw=true" width="140"/></a><br/><sub>🚗 TSLA</sub></td></tr></table>
 
 - **Why multi-agentization instead of 💬 “just ask ChatGPT?”:**
   - Asking a general LLM `“What stock should I buy?”` has several fundamental limitations:
