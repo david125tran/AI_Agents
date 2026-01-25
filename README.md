@@ -83,18 +83,26 @@ flowchart LR
   
 ## 📄 Example Output Due Diligence PDF Reports
   `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API and appending warnings to the report, lol.`
-- **📟 NVDA:**  
-  [➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)  
-  <img src="./02/images/NVDA.png" width="45%" />
 
-- **✨ PLTR:**  
-  [➡️ Open full PDF report](./02/reports/PLTR_due_diligence_20260125.pdf)  
-  <img src="./02/images/PLTR.png" width="45%" />
-
-- **🚗 TSLA:**  
-  [➡️ Open full PDF report](./02/reports/TSLA_due_diligence_20260125.pdf)  
-  <img src="./02/images/TSLA.png" width="45%" />
-
+<table>
+  <tr>
+    <td align="center">
+      <b>📟 NVDA</b><br/>
+      <a href="./02/reports/NVDA_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
+      <img src="./02/images/NVDA.png" width="350"/>
+    </td>
+    <td align="center">
+      <b>✨ PLTR</b><br/>
+      <a href="./02/reports/PLTR_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
+      <img src="./02/images/PLTR.png" width="350"/>
+    </td>
+    <td align="center">
+      <b>🚗 TSLA</b><br/>
+      <a href="./02/reports/TSLA_due_diligence_20260125.pdf">➡️ Open Full PDF</a><br/><br/>
+      <img src="./02/images/TSLA.png" width="350"/>
+    </td>
+  </tr>
+</table>
 
 - **Why multi-agentization instead of 💬 “just ask ChatGPT?”:**
   - Asking a general LLM `“What stock should I buy?”` has several fundamental limitations:
