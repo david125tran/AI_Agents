@@ -82,7 +82,7 @@ flowchart LR
   The result is a production-style stock due diligence agent that transforms a natural-language question into a structured, cited, auditable PDF report, with clear separation between: (1) Deterministic financial facts, (2) Recent market news, (3) Semantic evidence retrieval, and (4) LLM reasoning.
   
 ## 📄 Example Output Due Diligence PDF Reports
-  `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API and appending warnings to the report, lol. If you download the pdf, the news links should be clickable.`
+  `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API (because I'm on free tier) and appending warnings to the report, lol. If you download the pdf, the news links should be clickable.`
 
 <table>
   <tr>
