@@ -179,33 +179,16 @@ flowchart LR
     - LLM-written investment view  
     - Claim validation results  
 
-## 📄 Example Due Diligence Report (NVDA)
-
-<div align="center">
-
-<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/01.png?raw=true" width="40%" />
-<br/><br/>
-
-<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/02.png?raw=true" width="40%" />
-<br/><br/>
-
-<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/03.png?raw=true" width="40%" />
-<br/><br/>
-
-<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/04.png?raw=true" width="40%" />
-<br/><br/>
-
-<img style="border: 2px solid #000;" src="https://github.com/david125tran/AI_Agents/blob/main/02/images/05.png?raw=true" width="40%" />
-<br/><br/>
-
-</div>
-
-### 📄 Example Due Diligence Reports
-- **NVDA:**
+## 📄 Example Due Diligence Reports
+- **📟 NVDA:**
 [➡️ Open full PDF report](./02/reports/NVDA_due_diligence_20260125.pdf)
-
-<img src="./02/images/01.png" width="45%" />
-<img src="./02/images/02.png" width="45%" />
+<img src="./02/images/NVDA.png" width="45%" />
+- **✨ PLTR:**
+[➡️ Open full PDF report](./02/reports/PLTR_due_diligence_20260125.pdf)
+<img src="./02/images/PLTR.png" width="45%" />
+- **🚗TSLA:**
+[➡️ Open full PDF report](./02/reports/TSLA_due_diligence_20260125.pdf)
+<img src="./02/images/TSLA.png" width="45%" />
 
 - **Initial Problems:**  
   I originally began this project about a month ago by leaning heavily on general web search (`Tavily`) as the primary knowledge source. Early versions of the system tried to answer investment questions purely from live web results, but I quickly ran into two practical problems:  
