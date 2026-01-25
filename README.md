@@ -82,10 +82,11 @@ flowchart LR
   The result is a production-style stock due diligence agent that transforms a natural-language question into a structured, cited, auditable PDF report, with clear separation between: (1) Deterministic financial facts, (2) Recent market news, (3) Semantic evidence retrieval, and (4) LLM reasoning.
   
 ## 📄 Example Output Due Diligence PDF Reports
-  `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API (because I'm on free tier) and appending warnings to the report, lol. If you download the pdf, the news links should be clickable.`
-
-  `➡️ Click the png images to open the full report 🔗`
-<table><tr><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/NVDA_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA.png?raw=true" width="140"/></a><br/><sub>📟 NVDA</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/PLTR.png?raw=true" width="140"/></a><br/><sub>✨ PLTR</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/TSLA.png?raw=true" width="140"/></a><br/><sub>🚗 TSLA</sub></td></tr></table>
+  `Please ignore the warnings in the report.  I was getting throttled by Alpha Vantage API (because I'm on free tier) and appending warnings to the report, lol. If you download the pdf, the news links should be clickable.`  
+    
+**Report Preview:**  
+➡️ Click on the png images to open the full report 🔗
+<table><tr><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/NVDA_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/NVDA.png?raw=true" width="260"/></a><br/><sub>📟 NVDA</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/PLTR.png?raw=true" width="260"/></a><br/><sub>✨ PLTR</sub></td><td align="center"><a href="https://github.com/david125tran/AI_Agents/blob/main/02/reports/PLTR_due_diligence_20260125.pdf"><img src="https://github.com/david125tran/AI_Agents/blob/main/02/images/TSLA.png?raw=true" width="260"/></a><br/><sub>🚗 TSLA</sub></td></tr></table>
 
 
 
