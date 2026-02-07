@@ -177,4 +177,31 @@ flowchart LR
 
     V2 --> PDF2[PDF Report]
     V2 --> Console2[Console Output]
+   
 ```
+---
+
+## ⭐ 05: ReAct Wardrobe Planner (Bedrock + RAG + Tooling)
+
+- **Project Overview:**  I built this multi-agentic workflow with a ReAct agent to demo different concepts currently within the Applied AI Engineering landscape to showcase during a presentation that I was involved in.  And so I have the script printing to the console in a user friendly way for a non-technical audience because I was explaining these concepts to them.
+
+- **What This Project Demonstrates 🎯:** 
+
+| Capability | How It Appears in This Project |
+|------------|--------------------------------|
+| **AI Equipped with Tooling** | The agent calls a **weather API** tool to get weather data.|
+| **Retrieval Augmented Generation (RAG)** | The system retrieves relevant sections from a **mock employee handbook** to follow company attire policy when selecting outfits. |
+| **NLP (Text Classification)** | Clothing items are classified into **Tops, Bottoms, and Footwear** using a lightweight TF-IDF binning approach. |
+| **AI-Driven Action / Output Generation** | The agent generates a **standalone HTML “outfit card”** summarizing the recommended outfit, weather, and reasoning. |
+| **Structured Tool Schemas** | Pydantic models validate tool inputs, ensuring the LLM sends properly structured JSON when calling tools. |
+
+- **ReAct Agent 🤖:**  ReAct forces the model to:
+    - Think briefly  
+    - Use one tool  
+    - Observe the result  
+    - Repeat  
+  
+  This creates **traceable reasoning steps** instead of a single opaque response. Each decision is tied to real data: weather, policy, or wardrobe inventory.
+
+- **Why TF-IDF binning instead of fine-tuning?** So I wanted to demonstrate text classification here but was trying to demonstrate tradeoffs between costs and latency here.  I was showcasing clustering the clothes into three distinct bins/cabinets: **(1)** Tops, **(2)** Bottoms, and **3** Footwear.  Instead of fine-tuning a model, I used a nearest-anchor TF-IDF classifier. Because clothing item names are noun-dense and lexically distinct across tops, bottoms, and footwear, cosine similarity to curated class prototypes gave near-perfect separation. The problem was driven by surface vocabulary, not deep semantics, so a lightweight NLP approach delivered 99% accuracy across **N=195** samples with minimal cost and latency.
+
