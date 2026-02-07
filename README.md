@@ -203,7 +203,7 @@ flowchart LR
   
   This creates **traceable reasoning steps** instead of a single opaque response. Each decision is tied to real data: weather, policy, or wardrobe inventory.
 
-- **Wardrobe Knowledge Base** In this script, I present a wardrobe knowledge base but first start by classfying the items into three distinct bins: Tops, Bottoms, Footwear.  The **Cabinet** column represents the Truth so that I can compare my NLP text classification against it.  
+- **Wardrobe Knowledge Base** In this script, I present a wardrobe knowledge base but first start by classfying the items into three distinct bins: Tops, Bottoms, Footwear.  The **Cabinet** column represents the Truth so that I can compare my NLP text classification against it.  I didn't want to scare my audience and so I stuck to a simple excel sheet lol. 
 <p align="center">
   <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/01.png?raw=true" width="800" />
 </p>
