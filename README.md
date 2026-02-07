@@ -183,7 +183,7 @@ flowchart LR
 
 ## ⭐ 05: ReAct Wardrobe Planner (Bedrock + RAG + Tooling)
 
-- **Project Overview:**  I built this multi-agentic workflow with a ReAct agent to demo different concepts currently within the Applied AI Engineering landscape to showcase during a presentation that I was involved in.  And so I have the script printing to the console in a user friendly way for a non-technical audience because I was explaining these concepts to them.
+- **Project Overview:**  I built this multi-agentic workflow with a ReAct agent to demo different concepts currently within the Applied AI Engineering landscape to showcase during a presentation that I was involved in.  And so I have the script printing to the console in a user friendly way for a non-technical audience because I was explaining these concepts to them. The system is intentionally verbose and visual in the console so my non-technical audience can see exactly how the agent thinks, acts, and uses tools.
 
 - **What This Project Demonstrates 🎯:** 
 
@@ -203,5 +203,37 @@ flowchart LR
   
   This creates **traceable reasoning steps** instead of a single opaque response. Each decision is tied to real data: weather, policy, or wardrobe inventory.
 
-- **Why TF-IDF binning instead of fine-tuning?** So I wanted to demonstrate text classification here but was trying to demonstrate tradeoffs between costs and latency here.  I was showcasing clustering the clothes into three distinct bins/cabinets: **(1)** Tops, **(2)** Bottoms, and **3** Footwear.  Instead of fine-tuning a model, I used a nearest-anchor TF-IDF classifier. Because clothing item names are noun-dense and lexically distinct across tops, bottoms, and footwear, cosine similarity to curated class prototypes gave near-perfect separation. The problem was driven by surface vocabulary, not deep semantics, so a lightweight NLP approach delivered 99% accuracy across **N=195** samples with minimal cost and latency.
+- **Wardrobe Knowledge Base** In this script, I present a wardrobe knowledge base but first start by classfying the items into three distinct bins: Tops, Bottoms, Footwear.  The **Cabinet** column represents the Truth so that I can compare my NLP text classification against it.  
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/01.png?raw=true" width="800" />
+</p>
+
+- **NLP - Text Classification:** Under the hood, each clothing item name is converted into a TF-IDF vector and compared using cosine similarity against curated “anchor” vocabularies representing each cabinet (Tops, Bottoms, Footwear). The item is assigned to the bin whose anchor terms it most closely matches in vector space. 
+
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/02.png?raw=true" width="800" />
+</p>
+
+- **Why TF-IDF binning instead of fine-tuning?** So I wanted to demonstrate text classification here but was trying to demonstrate tradeoffs between costs and latency here.  I was showcasing clustering the clothes into three distinct bins/cabinets: **(1)** Tops, **(2)** Bottoms, and **3** Footwear.  Instead of fine-tuning a model, I used a nearest-anchor TF-IDF classifier. Because clothing item names are noun-dense and lexically distinct across tops, bottoms, and footwear, cosine similarity to curated class prototypes gave near-perfect separation. The task was driven by surface vocabulary, not deep semantics, so a lightweight NLP approach delivered 99% accuracy across **N=195** samples with minimal cost and latency.
+
+
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/03.png?raw=true" width="800" />
+</p>
+
+- **🧾 Token Efficiency via “Toon” Formatting:** Where possible, structured data is converted from verbose JSON into a compact CSV-like “Toon” format before being sent to the LLM. This reduces unnecessary tokens such as repeated field names and nesting.  In testing, converting structured data (like weather and wardrobe search results) into Toon format reduced token count by ~50%, lowering cost and improving response speed without losing information needed for reasoning.
+
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/06.png?raw=true" width="800" />
+</p>
+
+- **ReAct Agent 🤖:** I print everything to the console in a user friendly way to see how the Agent is reasoning and acting between tool usage, etc.  
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/04.png?raw=true" width="800" />
+</p>
+
+- **Action 🤖:** Finally, the output of the 1st Agent becomes the input of a 2nd Agent where I have the 2nd Agent craft a HTML card with my planned outfit for the day along with a robot-hand-crafted poem.  I bump up the temperature for a little bit more creativity.  But unfortunately, this card isn't too creative lol.   
+<p align="center">
+  <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/05.png?raw=true" width="300" />
+</p>
 
