@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planned Attire</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .attire-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .day-header {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .outfit-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .outfit-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 12px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .outfit-item:last-child {
+            border-bottom: none;
+        }
+        
+        .outfit-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        
+        .outfit-value {
+            color: #2c3e50;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .weather-section {
+            background: #e3f2fd;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .weather-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+        
+        .weather-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+        
+        .weather-time {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .weather-temp {
+            color: #1565c0;
+            font-weight: bold;
+        }
+        
+        .poem-section {
+            background: #fff3e0;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            font-style: italic;
+            line-height: 1.6;
+            color: #bf360c;
+            border-left: 4px solid #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <div class="attire-card">
+        <div class="day-header">Sunday</div>
+        
+        <div class="outfit-section">
+            <div class="outfit-item">
+                <span class="outfit-label">Top:</span>
+                <span class="outfit-value">V-Neck Merino Sweater</span>
+            </div>
+            <div class="outfit-item">
+                <span class="outfit-label">Bottom:</span>
+                <span class="outfit-value">Wool Trousers</span>
+            </div>
+            <div class="outfit-item">
+                <span class="outfit-label">Footwear:</span>
+                <span class="outfit-value">Leather Boots</span>
+            </div>
+        </div>
+        
+        <div class="weather-section">
+            <div class="weather-title">Commute Weather</div>
+            <div class="weather-item">
+                <span class="weather-time">5:00 AM (Durham)</span>
+                <span class="weather-temp">29°F Clear</span>
+            </div>
+            <div class="weather-item">
+                <span class="weather-time">6:00 AM (Burlington)</span>
+                <span class="weather-temp">27°F Clear</span>
+            </div>
+            <div class="weather-item">
+                <span class="weather-time">3:00 PM (Durham)</span>
+                <span class="weather-temp">44°F Sunny</span>
+            </div>
+            <div class="weather-item">
+                <span class="weather-time">4:00 PM (Burlington)</span>
+                <span class="weather-temp">39°F Overcast</span>
+            </div>
+        </div>
+        
+        <div class="poem-section">
+            Wrapped in merino's gentle embrace,<br>
+            While winter's breath nips at my face.<br>
+            Wool and leather, warm and true,<br>
+            Through morning frost and skies of blue.<br>
+            Professional comfort, styled with care,<br>
+            Ready for whatever weather's there.
+        </div>
+    </div>
+</body>
+</html>
