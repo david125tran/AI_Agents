@@ -217,108 +217,99 @@ def weather_json_to_toon(json_str: str) -> str:
 
 
 # ---------------------------------- External Integrations ----------------------------------
-def get_weather_for_locations_tomorrow(*, verbose: bool = False) -> Dict[str, Any]:
-    """
-    Use this function to return mock weather data for testing without hitting the real API.
-    Uncomment the real API call code and comment out the mock data to use the real function.
-    """
-
-    test_data = {
-        "location_home_5am": {
-            "location": "Durham, NC",
-            "time": "2026-02-06 05:00",
-            "temp_f": 29.5,
-            "condition": "Clear "
-        },
-        "location_work_6am": {
-            "location": "Burlington, NC",
-            "time": "2026-02-06 06:00",
-            "temp_f": 27.2,
-            "condition": "Clear "
-        },
-        "location_work_4pm": {
-            "location": "Burlington, NC",
-            "time": "2026-02-06 16:00",
-            "temp_f": 38.8,
-            "condition": "Overcast "
-        },
-        "location_home_3pm": {
-            "location": "Durham, NC",
-            "time": "2026-02-06 15:00",
-            "temp_f": 43.7,
-            "condition": "Sunny"
-        }
-    }
-
-    return test_data
-
-
-# def get_weather_for_locations_tomorrow(verbose: bool = False):
+# def get_weather_for_locations_tomorrow(*, verbose: bool = False) -> Dict[str, Any]:
 #     """
-#     Fetches weather for LOCATION_HOME at 5 am and LOCATION_WORK at 4 pm for tomorrow.
-#     Returns a dict with weather info for both locations.
+#     Use this function to return mock weather data for testing without hitting the real API.
+#     Uncomment the real API call code and comment out the mock data to use the real function.
 #     """
-#     base_url = "http://api.weatherapi.com/v1/forecast.json"
-#     results = {}
 
-#     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-
-#     def fetch_weather(location, target_hour):
-#         params = {
-#             "key": WEATHER_API_KEY,
-#             "q": location,
-#             "days": 2,  # Get today and tomorrow
-#             "aqi": "no",
-#             "alerts": "no"
+#     test_data = {
+#         "location_home_5am": {
+#             "location": "Durham, NC",
+#             "time": "2026-02-06 05:00",
+#             "temp_f": 29.5,
+#             "condition": "Clear "
+#         },
+#         "location_work_6am": {
+#             "location": "Burlington, NC",
+#             "time": "2026-02-06 06:00",
+#             "temp_f": 27.2,
+#             "condition": "Clear "
+#         },
+#         "location_work_4pm": {
+#             "location": "Burlington, NC",
+#             "time": "2026-02-06 16:00",
+#             "temp_f": 38.8,
+#             "condition": "Overcast "
+#         },
+#         "location_home_3pm": {
+#             "location": "Durham, NC",
+#             "time": "2026-02-06 15:00",
+#             "temp_f": 43.7,
+#             "condition": "Sunny"
 #         }
-#         response = requests.get(base_url, params=params)
-#         response.raise_for_status()
-#         data = response.json()
-#         # Find the forecast for tomorrow
-#         for day in data["forecast"]["forecastday"]:
-#             if day["date"] == tomorrow:
-#                 for hour in day["hour"]:
-#                     if hour["time"].endswith(f"{target_hour:02d}:00"):
-#                         return {
-#                             "location": location,
-#                             "time": hour["time"],
-#                             "temp_f": hour["temp_f"],
-#                             "condition": hour["condition"]["text"]
-#                         }
-#         return None
+#     }
 
-#     results["location_home_5am"] = fetch_weather(LOCATION_HOME, 5)
-#     results["location_work_6am"] = fetch_weather(LOCATION_WORK, 6)
-#     results["location_work_4pm"] = fetch_weather(LOCATION_WORK, 16)
-#     results["location_home_3pm"] = fetch_weather(LOCATION_HOME, 15)
+#     return test_data
 
-#     if verbose:
-#         print_banner("🌤️ Weather API Call", color=Fore.BLUE)
-#         # ---- Print JSON + token estimate ----
-#         print_banner("Weather (JSON)")
-#         results_json = json.dumps(results, indent=2)
-#         print(results_json)
-#         estimate_token_count("json", results_json)
 
-#         # ---- Print Toon + token estimate ----
-#         print_banner("Weather (Toon)")
-#         results_toon = weather_json_to_toon(results_json)
-#         print(results_toon)
-#         estimate_token_count("toon", results_toon)
-
-#         # ---- Savings summary (same math you used before) ----
-#         json_tokens_est = len(results_json) / 4
-#         toon_tokens_est = len(results_toon) / 4
-
-#         token_saved = json_tokens_est - toon_tokens_est
-#         pct_saved = (token_saved / json_tokens_est) * 100 if json_tokens_est else 0.0
-
-#         print(
-#             f"\n{Fore.GREEN}By converting from JSON -> Toon, "
-#             f"estimated token reduction: {token_saved:.2f} tokens ({pct_saved:.2f}%).{Style.RESET_ALL}"
-#         )
-
-#     return results
+def get_weather_for_locations_tomorrow(verbose: bool = False):
+    """
+    Fetches weather for LOCATION_HOME at 5 am and LOCATION_WORK at 4 pm for tomorrow.
+    Returns a dict with weather info for both locations.
+    """
+    base_url = "http://api.weatherapi.com/v1/forecast.json"
+    results = {}
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    def fetch_weather(location, target_hour):
+        params = {
+            "key": WEATHER_API_KEY,
+            "q": location,
+            "days": 2,  # Get today and tomorrow
+            "aqi": "no",
+            "alerts": "no"
+        }
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        # Find the forecast for tomorrow
+        for day in data["forecast"]["forecastday"]:
+            if day["date"] == tomorrow:
+                for hour in day["hour"]:
+                    if hour["time"].endswith(f"{target_hour:02d}:00"):
+                        return {
+                            "location": location,
+                            "time": hour["time"],
+                            "temp_f": hour["temp_f"],
+                            "condition": hour["condition"]["text"]
+                        }
+        return None
+    results["location_home_5am"] = fetch_weather(LOCATION_HOME, 5)
+    results["location_work_6am"] = fetch_weather(LOCATION_WORK, 6)
+    results["location_work_4pm"] = fetch_weather(LOCATION_WORK, 16)
+    results["location_home_3pm"] = fetch_weather(LOCATION_HOME, 15)
+    if verbose:
+        print_banner("🌤️ Weather API Call", color=Fore.BLUE)
+        # ---- Print JSON + token estimate ----
+        print_banner("Weather (JSON)")
+        results_json = json.dumps(results, indent=2)
+        print(results_json)
+        estimate_token_count("json", results_json)
+        # ---- Print Toon + token estimate ----
+        print_banner("Weather (Toon)")
+        results_toon = weather_json_to_toon(results_json)
+        print(results_toon)
+        estimate_token_count("toon", results_toon)
+        # ---- Savings summary (same math you used before) ----
+        json_tokens_est = len(results_json) / 4
+        toon_tokens_est = len(results_toon) / 4
+        token_saved = json_tokens_est - toon_tokens_est
+        pct_saved = (token_saved / json_tokens_est) * 100 if json_tokens_est else 0.0
+        print(
+            f"\n{Fore.GREEN}By converting from JSON -> Toon, "
+            f"estimated token reduction: {token_saved:.2f} tokens ({pct_saved:.2f}%).{Style.RESET_ALL}"
+        )
+    return results
 
 
 def invoke_bedrock_with_backoff(
@@ -575,7 +566,7 @@ class GetWeatherArgs(BaseModel):
     """
     Tool args schema for get_weather.
     """
-    verbose: bool = Field(default=False, description="If true, tool prints debug details.")
+    verbose: bool = Field(default=True, description="If true, tool prints debug details.")
 
 
 def pydantic_model_dump(obj: BaseModel) -> Dict[str, Any]:
@@ -868,7 +859,7 @@ def make_tools(df: Optional[pd.DataFrame], policy_text: str) -> Dict[str, ToolSp
 
     handbook_records = embed_handbook_chunks(AWS_REGION, EMBEDDING_MODEL_ID, SCRIPT_DIR, handbook_chunks)
 
-    def tool_get_weather(verbose: bool = False) -> Dict[str, Any]:
+    def tool_get_weather(verbose: bool = True) -> Dict[str, Any]:
         return get_weather_for_locations_tomorrow(verbose=verbose)
 
     def tool_search_wardrobe(
