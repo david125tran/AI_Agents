@@ -208,7 +208,7 @@ flowchart LR
   <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/01.png?raw=true" width="800" />
 </p>
 
-- **NLP - Text Classification:** Under the hood, each clothing item name is converted into a TF-IDF vector and compared using cosine similarity against curated “anchor” vocabularies representing each cabinet (Tops, Bottoms, Footwear). The item is assigned to the bin whose anchor terms it most closely matches in vector space. 
+- **NLP - Text Classification:** Each clothing item name is converted into a TF-IDF vector and compared (via cosine similarity) against a curated list of anchor clothing terms labeled as Tops, Bottoms, or Footwear. The item is assigned to the cabinet of the single anchor term it most closely matches in vector space.
 
 <p align="center">
   <img src="https://github.com/david125tran/AI_Agents/blob/main/05/images/02.png?raw=true" width="800" />
